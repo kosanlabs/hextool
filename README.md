@@ -13,9 +13,13 @@ implement dasar dari hexdump dengan C.
 
 ## Cara Menjalankannya
 
-```
-gcc -o contoh contoh.c
-./contoh
+```bash
+# pakai library math.h untuk fungsi log2
+# tambahkan juga parameter -lm
+gcc -o contoh contoh.c -lm
+
+# contoh: ./contoh contoh
+./contoh file_biner
 ```
 
 ## Output result
