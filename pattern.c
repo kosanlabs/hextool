@@ -1,4 +1,4 @@
-#include "pattern.h"
+#include "include/pattern.h"
 
 #include <ctype.h>
 #include <stdio.h>

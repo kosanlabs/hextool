@@ -1,8 +1,8 @@
-#include "color.h"
+#include "include/color.h"
 
 #include <ctype.h>
 
-#include "config.h"
+#include "include/config.h"
 
 const char* byte_color(unsigned char chr, bool elf_magic_pos, bool is_match) {
   if (is_match) {

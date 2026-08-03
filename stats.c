@@ -1,9 +1,9 @@
-#include "stats.h"
+#include "include/stats.h"
 
 #include <stdio.h>
 
-#include "config.h"
-#include "pattern.h"
+#include "include/config.h"
+#include "include/pattern.h"
 
 void print_hasil(const char* filename, const DumpStatistik* stats) {
   printf("\n\n");

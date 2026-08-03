@@ -1,10 +1,10 @@
-#include "cli.h"
+#include "include/cli.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "pattern.h"
+#include "include/pattern.h"
 
 static void print_usage(const char* prog) {
   fprintf(stderr,

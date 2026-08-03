@@ -1,12 +1,12 @@
-#include "format.h"
+#include "include/format.h"
 
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 
-#include "color.h"
-#include "config.h"
-#include "pattern.h"
+#include "include/color.h"
+#include "include/config.h"
+#include "include/pattern.h"
 
 char printable_char(unsigned char c) {
   return isprint(c) ? (char)c : '.';

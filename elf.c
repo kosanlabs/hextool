@@ -1,4 +1,4 @@
-#include "elf.h"
+#include "include/elf.h"
 
 bool detect_elf(FILE* file) {
   unsigned char magic[4];

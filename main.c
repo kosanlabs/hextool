@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "cli.h"
-#include "dump.h"
-#include "stats.h"
-#include "types.h"
+#include "include/cli.h"
+#include "include/dump.h"
+#include "include/stats.h"
+#include "include/types.h"
 
 int main(int argc, char* argv[]) {
   const char* filename = parse_args(argc, argv);
