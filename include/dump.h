@@ -5,6 +5,6 @@
 
 #include "types.h"
 
-void dump_file(FILE* file, DumpStatistik* stats);
+bool dump_file(FILE* file, DumpStatistik* stats);
 
 #endif  // !DUMP_H

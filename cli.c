@@ -27,18 +27,16 @@ const char* parse_args(int argc, char* argv[]) {
 
   while (i < argc) {
     if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
-      if (!parse_hex_pattern(argv[i + 1])) {
+      if (!pattern_init_hex(argv[i + 1])) {
         fprintf(stderr, "error: pattern hex tidak valid\n");
         return NULL;
       }
-      g_has_pattern = true;
       i += 2;
     } else if (strcmp(argv[i], "-S") == 0 && i + 1 < argc) {
-      if (!parse_ascii_pattern(argv[i + 1])) {
+      if (!pattern_init_ascii(argv[i + 1])) {
         fprintf(stderr, "error: pattern ASCII tidak valid\n");
         return NULL;
       }
-      g_has_pattern = true;
       i += 2;
     } else if (argv[i][0] == '-') {
       fprintf(stderr, "error: opsi tidak dikenal: %s\n", argv[i]);

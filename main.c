@@ -8,7 +8,9 @@
 
 int main(int argc, char* argv[]) {
   const char* filename = parse_args(argc, argv);
-  if (filename == NULL) return EXIT_FAILURE;
+  if (filename == NULL) {
+    return EXIT_FAILURE;
+  }
 
   FILE* file = fopen(filename, "rb");
   if (file == NULL) {
@@ -17,7 +19,11 @@ int main(int argc, char* argv[]) {
   }
 
   DumpStatistik stats = {0};
-  dump_file(file, &stats);
+  if (!dump_file(file, &stats)) {
+    fprintf(stderr, "error: gagal membaca file %s\n", filename);
+    fclose(file);
+    return EXIT_FAILURE;
+  }
   fclose(file);
 
   print_hasil(filename, &stats);

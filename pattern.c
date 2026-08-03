@@ -4,55 +4,51 @@
 #include <stdio.h>
 #include <string.h>
 
-unsigned char g_pattern[256];
-size_t g_pat_len = 0;
-bool g_has_pattern = false;
+#include "include/config.h"
 
-bool parse_hex_pattern(const char* str) {
-  g_pat_len = 0;
+static unsigned char s_pattern[MAX_PATTERN_LEN];
+static size_t s_pat_len = 0;
+static bool s_has_pattern = false;
+
+bool pattern_init_hex(const char* str) {
+  s_pat_len = 0;
   size_t len = strlen(str);
   size_t i = 0;
 
-  while (i < len && g_pat_len < 256) {
-    while (i < len && isspace((unsigned char)str[i])) {
-      i++;
-    }
-
-    if (i >= len) {
-      break;
-    }
+  while (i < len && s_pat_len < MAX_PATTERN_LEN) {
+    while (i < len && isspace((unsigned char)str[i])) i++;
+    if (i >= len) break;
 
     unsigned int byte;
-
     if (sscanf(str + i, "%2x", &byte) == 1) {
-      g_pattern[g_pat_len++] = (unsigned char)byte;
+      s_pattern[s_pat_len++] = (unsigned char)byte;
       i += 2;
-
-      while (i < len && isspace((unsigned char)str[i])) {
-        i++;
-      }
+      while (i < len && isspace((unsigned char)str[i])) i++;
     } else {
+      s_has_pattern = false;
       return false;
     }
   }
-
-  return g_pat_len > 0;
+  s_has_pattern = s_pat_len > 0;
+  return s_has_pattern;
 }
 
-bool parse_ascii_pattern(const char* str) {
-  g_pat_len = strlen(str);
-  if (g_pat_len == 0 || g_pat_len > 256) {
-    return true;
+bool pattern_init_ascii(const char* str) {
+  s_pat_len = strlen(str);
+  if (s_pat_len == 0 || s_pat_len > MAX_PATTERN_LEN) {
+    s_has_pattern = false;
+    return false;
   }
-
-  memcpy(g_pattern, str, g_pat_len);
+  memcpy(s_pattern, str, s_pat_len);
+  s_has_pattern = true;
   return true;
 }
 
-bool is_match_at(const unsigned char* buffer, size_t buf_len, size_t pos) {
-  if (pos + g_pat_len > buf_len) {
-    return false;
-  }
+bool pattern_is_active(void) {
+  return s_has_pattern;
+}
 
-  return memcmp(buffer + pos, g_pattern, g_pat_len) == 0;
+bool pattern_match_at(const unsigned char* buffer, size_t buf_len, size_t pos) {
+  if (!s_has_pattern || pos + s_pat_len > buf_len) return false;
+  return memcmp(buffer + pos, s_pattern, s_pat_len) == 0;
 }

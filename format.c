@@ -13,16 +13,15 @@ char printable_char(unsigned char c) {
 }
 
 void print_offset(size_t offset) {
-  printf(CLR_OFFSET "%08zx  " CLR_RESET "    ", offset);
+  printf(CLR_OFFSET "%08zx " CLR_RESET " ", offset);
 }
 
-double calc_entropy(const unsigned char* buf, size_t n) {
+static double calc_entropy(const unsigned char* buf, size_t n) {
   if (n == 0) {
     return 0.0;
   }
 
   int freq[256] = {0};
-
   for (size_t i = 0; i < n; i++) {
     freq[buf[i]]++;
   }
@@ -34,25 +33,19 @@ double calc_entropy(const unsigned char* buf, size_t n) {
       entropy -= p * log2(p);
     }
   }
-
   return entropy;
 }
 
 void print_entropy_bar(const unsigned char* buf, size_t n) {
   double e = calc_entropy(buf, n);
-  int filled = (int)((e / 8.0) * 8.0 + 0.5);
-
-  if (filled > 8) {
-    filled = 8;
+  int filled = (int)((e / 8.0) * ENTROPY_BAR_WIDTH + 0.5);
+  if (filled > ENTROPY_BAR_WIDTH) {
+    filled = ENTROPY_BAR_WIDTH;
   }
 
   printf(CLR_ENTROPY "[");
-  for (int i = 0; i < 8; i++) {
-    if (i < filled) {
-      printf("|");
-    } else {
-      printf(" ");
-    }
+  for (int i = 0; i < ENTROPY_BAR_WIDTH; i++) {
+    putchar(i < filled ? '|' : ' ');
   }
   printf("]" CLR_RESET " ");
 }
@@ -61,20 +54,22 @@ void print_le32(const unsigned char* buf, size_t n) {
   if (n >= 4) {
     unsigned int val = (unsigned int)buf[0] | ((unsigned int)buf[1] << 8) |
                        ((unsigned int)buf[2] << 16) | ((unsigned int)buf[3] << 24);
-    printf(CLR_LE "|%08x|" CLR_RESET "  ", val);
+    printf(CLR_LE "|%08x|" CLR_RESET " ", val);
   } else {
-    printf("          ");
+    printf("           ");
   }
 }
 
 void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset) {
   for (size_t i = 0; i < BYTES_PER_LINE; i++) {
-    if (i == 8) printf(" ");
+    if (i == 8) {
+      putchar(' ');
+    }
     if (i < bytes_read) {
-      bool elf_pos = is_elf && (offset + i) < 4;
-      bool match = g_has_pattern && is_match_at(buffer, bytes_read, i);
-      printf("%s%02X" CLR_RESET " ", byte_color(buffer[i], elf_pos, match));
-
+      bool elf_pos = is_elf && (offset + i) < ELF_MAGIC_SIZE;
+      bool match = pattern_is_active() && pattern_match_at(buffer, bytes_read, i);
+      printf("%s%02X" CLR_RESET " ", char_color(buffer[i], elf_pos, match),
+             (unsigned int)buffer[i]);
     } else {
       printf("   ");
     }
@@ -83,32 +78,25 @@ void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size
 
 void print_ascii(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset) {
   printf(CLR_ASCII "|" CLR_RESET);
-
   for (size_t i = 0; i < bytes_read; i++) {
-    bool elf_pos = is_elf && (offset + i) < 4;
-    bool match = g_has_pattern && is_match_at(buffer, bytes_read, i);
-
-    printf("%s%c" CLR_RESET, ascii_color(buffer[i], elf_pos, match), printable_char(buffer[i]));
+    bool elf_pos = is_elf && (offset + i) < ELF_MAGIC_SIZE;
+    bool match = pattern_is_active() && pattern_match_at(buffer, bytes_read, i);
+    printf("%s%c" CLR_RESET, char_color(buffer[i], elf_pos, match), printable_char(buffer[i]));
   }
-
   for (size_t i = bytes_read; i < BYTES_PER_LINE; i++) {
     putchar(' ');
   }
-
   printf(CLR_ASCII "|" CLR_RESET);
 }
 
 void print_inline_strings(const unsigned char* buffer, size_t bytes_read) {
-  char str[BYTES_PER_LINE + 1];
   size_t best_start = 0, best_len = 0;
   size_t cur_start = 0, cur_len = 0;
 
   for (size_t i = 0; i < bytes_read; i++) {
     if (isprint(buffer[i])) {
-      if (cur_len == 0) {
-        cur_start = 1;
-        cur_len++;
-      }
+      if (cur_len == 0) cur_start = i;
+      cur_len++;
     } else {
       if (cur_len > best_len) {
         best_len = cur_len;
@@ -117,66 +105,16 @@ void print_inline_strings(const unsigned char* buffer, size_t bytes_read) {
       cur_len = 0;
     }
   }
-
   if (cur_len > best_len) {
     best_len = cur_len;
     best_start = cur_start;
   }
 
-  if (best_len >= 4) {
-    printf("  " CLR_DIM "str:" CLR_RESET " " CLR_STR "\"");
+  if (best_len >= MIN_STRING_LEN) {
+    printf(" " CLR_DIM "str:" CLR_RESET " " CLR_STR "\"");
     for (size_t i = 0; i < best_len && (best_start + i) < bytes_read; i++) {
       putchar(buffer[best_start + i]);
     }
     printf("\"" CLR_RESET);
   }
-}
-
-const char* elf_field_name(size_t offset) {
-  switch (offset) {
-    case 0:
-      return "e_ident[MAG0-3]";
-    case 4:
-      return "e_ident[CLASS]";
-    case 5:
-      return "e_ident[DATA]";
-    case 6:
-      return "e_ident[VERSION]";
-    case 7:
-      return "e_ident[OSABI]";
-    case 8:
-      return "e_ident[ABIVERSION]";
-    case 16:
-      return "e_type";
-    case 18:
-      return "e_machine";
-    case 20:
-      return "e_version";
-    case 24:
-      return "e_entry";
-    case 32:
-      return "e_phoff";
-    case 40:
-      return "e_shoff";
-    case 48:
-      return "e_flags";
-    case 52:
-      return "e_ehsize";
-    case 54:
-      return "e_phentsize";
-    case 56:
-      return "e_phnum";
-    case 58:
-      return "e_shentsize";
-    case 60:
-      return "e_shnum";
-    case 62:
-      return "e_shstrndx";
-    default:
-      if (offset >= 9 && offset < 16) {
-        return "e_ident";
-      }
-      return NULL;
-  }
-  return NULL;
 }
