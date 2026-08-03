@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -O2 -std=c99 -Iinclude
 LDFLAGS = -lm
 TARGET = hextool
 
-SRCS = main.c cli.c dump.c format.c color.c pattern.c elf.c stats.c
+SRCS = main.c cli.c dump.c format.c color.c pattern.c elf.c stats.c reverse.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONY:: all clean

@@ -10,6 +10,7 @@ implement dasar dari hexdump dengan C.
 - baca arsitektur cpu
 - ngeparsing biner
 - baca little endian
+- reverse hexdump
 
 ## Cara Menjalankannya
 
@@ -20,8 +21,20 @@ make
 # untuk clear file executable dan object file
 make clean
 
-# contoh: ./contoh contoh
+# contoh: ./hextool file_biner
 ./hextool file_biner
+
+# cari & highlight pola hex (misal magic ELF)
+./hextool -s 7f454c46 file_biner
+
+# cari & highlight pola ascii (misal flag CTF)
+./hextool -S "flag{" file_biner
+
+# matikan warna (berguna kalau output diarahkan ke file)
+./hextool -c file_biner > dump.txt
+
+# reverse hexdump jadi biner
+./hextool -r dump.txt output.bin
 ```
 
 ## Output result

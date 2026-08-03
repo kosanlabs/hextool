@@ -47,7 +47,7 @@ void print_entropy_bar(const unsigned char* buf, size_t n) {
   for (int i = 0; i < ENTROPY_BAR_WIDTH; i++) {
     putchar(i < filled ? '|' : ' ');
   }
-  printf("]" CLR_RESET " ");
+  printf("%s]%s ", AC(CLR_ENTROPY), AC(CLR_RESET));
 }
 
 void print_le32(const unsigned char* buf, size_t n) {
@@ -77,7 +77,7 @@ void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size
 }
 
 void print_ascii(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset) {
-  printf(CLR_ASCII "|" CLR_RESET);
+  printf("%s|%s", AC(CLR_ASCII), AC(CLR_RESET));
   for (size_t i = 0; i < bytes_read; i++) {
     bool elf_pos = is_elf && (offset + i) < ELF_MAGIC_SIZE;
     bool match = pattern_is_active() && pattern_match_at(buffer, bytes_read, i);
@@ -116,6 +116,6 @@ void print_inline_strings(const unsigned char* buffer, size_t bytes_read) {
     for (size_t i = 0; i < best_len && (best_start + i) < bytes_read; i++) {
       putchar(buffer[best_start + i]);
     }
-    printf("\"" CLR_RESET);
+    printf("\"%s", AC(CLR_RESET));
   }
 }

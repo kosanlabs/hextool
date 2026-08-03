@@ -5,6 +5,9 @@
 #include "include/config.h"
 
 const char* char_color(unsigned char chr, bool elf_magic_pos, bool is_match) {
+  if (!color_is_enabled()) {
+    return "";
+  }
   if (is_match) {
     return CLR_MATCH;
   }
