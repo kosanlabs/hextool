@@ -13,7 +13,7 @@ char printable_char(unsigned char c) {
 }
 
 void print_offset(size_t offset) {
-  printf(CLR_OFFSET "%08zx " CLR_RESET " ", offset);
+  printf("%s%08zx %s", AC(CLR_OFFSET), offset, AC(CLR_RESET));
 }
 
 static double calc_entropy(const unsigned char* buf, size_t n) {
@@ -43,7 +43,7 @@ void print_entropy_bar(const unsigned char* buf, size_t n) {
     filled = ENTROPY_BAR_WIDTH;
   }
 
-  printf(CLR_ENTROPY "[");
+  printf("%s[", AC(CLR_ENTROPY));
   for (int i = 0; i < ENTROPY_BAR_WIDTH; i++) {
     putchar(i < filled ? '|' : ' ');
   }
@@ -54,7 +54,7 @@ void print_le32(const unsigned char* buf, size_t n) {
   if (n >= 4) {
     unsigned int val = (unsigned int)buf[0] | ((unsigned int)buf[1] << 8) |
                        ((unsigned int)buf[2] << 16) | ((unsigned int)buf[3] << 24);
-    printf(CLR_LE "|%08x|" CLR_RESET " ", val);
+    printf("%s|%08x|%s ", AC(CLR_LE), val, AC(CLR_RESET));
   } else {
     printf("           ");
   }
@@ -68,8 +68,8 @@ void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size
     if (i < bytes_read) {
       bool elf_pos = is_elf && (offset + i) < ELF_MAGIC_SIZE;
       bool match = pattern_is_active() && pattern_match_at(buffer, bytes_read, i);
-      printf("%s%02X" CLR_RESET " ", char_color(buffer[i], elf_pos, match),
-             (unsigned int)buffer[i]);
+      printf("%s%02X%s ", char_color(buffer[i], elf_pos, match), (unsigned int)buffer[i],
+             AC(CLR_RESET));
     } else {
       printf("   ");
     }
@@ -81,12 +81,13 @@ void print_ascii(const unsigned char* buffer, size_t bytes_read, bool is_elf, si
   for (size_t i = 0; i < bytes_read; i++) {
     bool elf_pos = is_elf && (offset + i) < ELF_MAGIC_SIZE;
     bool match = pattern_is_active() && pattern_match_at(buffer, bytes_read, i);
-    printf("%s%c" CLR_RESET, char_color(buffer[i], elf_pos, match), printable_char(buffer[i]));
+    printf("%s%c%s", char_color(buffer[i], elf_pos, match), printable_char(buffer[i]),
+           AC(CLR_RESET));
   }
   for (size_t i = bytes_read; i < BYTES_PER_LINE; i++) {
     putchar(' ');
   }
-  printf(CLR_ASCII "|" CLR_RESET);
+  printf("%s|%s", AC(CLR_ASCII), AC(CLR_RESET));
 }
 
 void print_inline_strings(const unsigned char* buffer, size_t bytes_read) {
@@ -111,7 +112,7 @@ void print_inline_strings(const unsigned char* buffer, size_t bytes_read) {
   }
 
   if (best_len >= MIN_STRING_LEN) {
-    printf(" " CLR_DIM "str:" CLR_RESET " " CLR_STR "\"");
+    printf(" %sstr:%s %s\"", AC(CLR_DIM), AC(CLR_RESET), AC(CLR_STR));
     for (size_t i = 0; i < best_len && (best_start + i) < bytes_read; i++) {
       putchar(buffer[best_start + i]);
     }

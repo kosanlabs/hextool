@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
+#include "include/color.h"
 #include "include/config.h"
 #include "include/elf.h"
 #include "include/format.h"
@@ -29,7 +30,7 @@ bool dump_file(FILE* file, DumpStatistik* stats) {
     if (stats->is_elf && offset < ELF_HEADER_SIZE) {
       const char* field = elf_field_name(offset);
       if (field) {
-        printf(" \x1b[90m; %s\x1b[0m", field);
+        printf(" %s; %s%s", AC(CLR_COMMENT), field, AC(CLR_RESET));
       }
     }
     putchar('\n');

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "include/color.h"
 #include "include/pattern.h"
 
 static void print_usage(const char* prog) {
@@ -18,7 +19,7 @@ static void print_usage(const char* prog) {
           "  %s /bin/ls\n"
           "  %s -s 7f454c46 /bin/ls        # cari magic ELF\n"
           "  %s -S \"flag{\" challenge.bin   # cari flag CTF\n",
-          prog, prog, prog, prog);
+          "  %s -c /bin/ls > dump.txt      # simpan tanpa warna\n", prog, prog, prog, prog, prog);
 }
 
 const char* parse_args(int argc, char* argv[]) {
@@ -38,6 +39,9 @@ const char* parse_args(int argc, char* argv[]) {
         return NULL;
       }
       i += 2;
+    } else if (strcmp(argv[i], "-c") == 0) {
+      color_disable();
+      i++;
     } else if (argv[i][0] == '-') {
       fprintf(stderr, "error: opsi tidak dikenal: %s\n", argv[i]);
       print_usage(argv[0]);

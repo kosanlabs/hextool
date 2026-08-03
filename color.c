@@ -22,3 +22,13 @@ const char* char_color(unsigned char chr, bool elf_magic_pos, bool is_match) {
   }
   return CLR_LOW;
 }
+
+static bool s_color_enabled = true;
+
+bool color_is_enabled(void) {
+  return s_color_enabled;
+}
+
+void color_disable(void) {
+  s_color_enabled = false;
+}

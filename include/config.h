@@ -30,5 +30,6 @@ enum {
 #define CLR_ARCH "\x1b[36;1m"
 #define CLR_BOLD "\x1b[1m"
 #define CLR_DIM "\x1b[2m"
+#define CLR_COMMENT "\1xb[90m"
 
 #endif // !CONFIG_H
