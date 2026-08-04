@@ -39,10 +39,11 @@ static int hex_val(char chr) {
   return -1;
 }
 
-bool reverse_hexdump(FILE* in, FILE out) {
+bool reverse_hexdump(FILE* in, FILE* out) {
   char line[2048];
   size_t line_no = 0;
   bool success = true;
+  long current_pos = 0;
 
   while (fgets(line, sizeof(line), in)) {
     line_no++;
@@ -65,11 +66,9 @@ bool reverse_hexdump(FILE* in, FILE out) {
 
     for (i = 0; i < 8; i++) {
       int v = hex_val(p[i]);
-
       if (v < 0) {
         break;
       }
-
       offset = (offset << 4) | (size_t)v;
     }
 
@@ -94,7 +93,6 @@ bool reverse_hexdump(FILE* in, FILE out) {
 
     if (*p == '|') {
       const char* end = p + 1;
-
       while (*end && *end != '|' && *end != '\n') {
         end++;
       }
@@ -144,17 +142,20 @@ bool reverse_hexdump(FILE* in, FILE out) {
       continue;
     }
 
-    if (fseek(&out, (long)offset, SEEK_SET) != 0) {
-      fprintf(stderr, "warning: cannot seek to offset 0x%08zx (line %zu)\n", offset, line_no);
-      success = false;
-      continue;
+    if ((long)offset != current_pos) {
+      if (fseek(out, (long)offset, SEEK_SET) != 0) {
+        fprintf(stderr, "warning: cannot seek to offset 0x%08zx (line %zu)\n", offset, line_no);
+        success = false;
+        continue;
+      }
     }
 
-    if (fwrite(bytes, 1, byte_count, &out) != byte_count) {
+    if (fwrite(bytes, 1, byte_count, out) != byte_count) {
       fprintf(stderr, "warning: write error at offset 0x%08zx (line %zu)\n", offset, line_no);
       success = false;
       continue;
     }
+    current_pos = (long)(offset + byte_count);
   }
 
   return success && !ferror(in);

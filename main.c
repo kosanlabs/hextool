@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
       fclose(in);
       return EXIT_FAILURE;
     }
-    if (!reverse_hexdump(in, *out)) {
+    if (!reverse_hexdump(in, out)) {
       fprintf(stderr, "error: reverse hexdump gagal\n");
       fclose(in);
       fclose(out);
