@@ -26,6 +26,11 @@ void print_hasil(const char* filename, const DumpStatistik* stats) {
     printf("Pattern        : %sSEARCH AKTIF%s\n", AC(CLR_MATCH), AC(CLR_RESET));
   }
 
+  if (stats->total_bytes == 0) {
+    printf("\n %s [tidak ada detail byte untuk file kosong]%s\n", AC(CLR_DIM), AC(CLR_RESET));
+    return;
+  }
+
   printf("\nDetail byte:\n");
   double pct_null = safe_pct(stats->null_count, stats->total_bytes);
   double pct_print = safe_pct(stats->print_count, stats->total_bytes);

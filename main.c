@@ -9,7 +9,16 @@
 
 int main(int argc, char* argv[]) {
   CliArgs args;
-  if (!parse_args(argc, argv, &args)) return EXIT_FAILURE;
+  if (!parse_args(argc, argv, &args)) {
+    return EXIT_FAILURE;
+  }
+
+  if (args.offset > 0 || args.length > 0) {
+    if (args.reverse) {
+      fprintf(stderr, "error: -o/-n gak kompatible dengan mode reverse\n");
+      return EXIT_FAILURE;
+    }
+  }
 
   if (args.reverse) {
     FILE* in = fopen(args.input, "r");
@@ -55,6 +64,10 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   fclose(file);
+
+  if (stats.total_lines == 0) {
+    fprintf(stderr, "warning: file kosong, tidak ada data untuk di dump\n");
+  }
 
   print_hasil(args.input, &stats);
   return 0;

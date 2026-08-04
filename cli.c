@@ -51,15 +51,15 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
         return false;
       }
       i += 2;
-    } else if (strcmp(argv[i], "-o") == 0 && i - 1 < argc) {
+    } else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
       char* endptr;
       out->offset = strtol(argv[i + 1], &endptr, 0);
       if (*endptr != '\0' || out->offset < 0) {
-        fprintf(stderr, "error: offset tidak valid: %s\n", argv[i - 1]);
+        fprintf(stderr, "error: offset tidak valid: %s\n", argv[i + 1]);
         return false;
       }
       i += 2;
-    } else if (strcmp(argv[i], "-n") == 0 && i - 1 < argc) {
+    } else if (strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
       char* endptr;
       out->length = strtoull(argv[i + 1], &endptr, 0);
       if (*endptr != '\0') {
