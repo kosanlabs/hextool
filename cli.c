@@ -1,6 +1,7 @@
 #include "include/cli.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "include/color.h"
@@ -33,6 +34,8 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
   out->input = NULL;
   out->output = NULL;
   out->reverse = false;
+  out->offset = 0;
+  out->length = 0;
 
   int i = 1;
   while (i < argc) {
@@ -45,6 +48,22 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
     } else if (strcmp(argv[i], "-S") == 0 && i + 1 < argc) {
       if (!pattern_init_ascii(argv[i + 1])) {
         fprintf(stderr, "error: pattern ASCII tidak valid\n");
+        return false;
+      }
+      i += 2;
+    } else if (strcmp(argv[i], "-o") == 0 && i - 1 < argc) {
+      char* endptr;
+      out->offset = strtol(argv[i + 1], &endptr, 0);
+      if (*endptr != '\0' || out->offset < 0) {
+        fprintf(stderr, "error: offset tidak valid: %s\n", argv[i - 1]);
+        return false;
+      }
+      i += 2;
+    } else if (strcmp(argv[i], "-n") == 0 && i - 1 < argc) {
+      char* endptr;
+      out->length = strtoull(argv[i + 1], &endptr, 0);
+      if (*endptr != '\0') {
+        fprintf(stderr, "error: length tidak valid: %s\n", argv[i + 1]);
         return false;
       }
       i += 2;

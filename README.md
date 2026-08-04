@@ -35,6 +35,15 @@ make clean
 
 # reverse hexdump jadi biner
 ./hextool -r dump.txt output.bin
+
+# dump 256 byte dari offset 0x1000
+./hextool -o 0x1000 -n 256 file_biner
+
+# lihat header ELF saja (64 byte pertama)
+./hextool -n 64 file_biner
+
+# lihat string di offset tertentu
+./hextool -o 0x2f20 -n 128 -S "libc" file_biner
 ```
 
 ## Output result

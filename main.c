@@ -41,8 +41,15 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  if (args.offset > 0 || args.length > 0) {
+    if (args.reverse) {
+      fprintf(stderr, "error: -o/-n tidak kompatible dengan mode reverse\n");
+      return EXIT_FAILURE;
+    }
+  }
+
   DumpStatistik stats = {0};
-  if (!dump_file(file, &stats)) {
+  if (!dump_file(file, &stats, args.offset, args.length)) {
     fprintf(stderr, "error: gagal membaca file %s\n", args.input);
     fclose(file);
     return EXIT_FAILURE;

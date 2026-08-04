@@ -8,10 +8,23 @@
 #include "include/elf.h"
 #include "include/format.h"
 
-bool dump_file(FILE* file, DumpStatistik* stats) {
+bool dump_file(FILE* file, DumpStatistik* stats, long offset, size_t length) {
   unsigned char buffer[BYTES_PER_LINE];
-  size_t offset = 0;
   size_t bytes_read;
+  size_t bytes_remaining = length;
+  size_t total_dumped = 0;
+
+  if (offset > 0) {
+    if (fseek(file, offset, SEEK_SET) != 0) {
+      perror("fseek");
+      return false;
+    }
+  }
+
+  size_t to_read = BYTES_PER_LINE;
+  if (length > 0 && bytes_remaining < to_read) {
+    to_read = bytes_remaining;
+  }
 
   stats->is_elf = detect_elf(file);
   if (stats->is_elf) {
@@ -26,6 +39,16 @@ bool dump_file(FILE* file, DumpStatistik* stats) {
     putchar(' ');
     print_ascii(buffer, bytes_read, stats->is_elf, offset);
     print_inline_strings(buffer, bytes_read);
+
+    total_dumped += bytes_read;
+    if (length > 0) {
+      if (total_dumped >= length) {
+        break;
+      }
+
+      bytes_remaining = length - total_dumped;
+      to_read = (bytes_remaining < BYTES_PER_LINE) ? bytes_remaining : BYTES_PER_LINE;
+    }
 
     if (stats->is_elf && offset < ELF_HEADER_SIZE) {
       const char* field = elf_field_name(offset);
