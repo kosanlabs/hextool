@@ -43,9 +43,23 @@ void print_entropy_bar(const unsigned char* buf, size_t n) {
     filled = ENTROPY_BAR_WIDTH;
   }
 
+  const char* BL = "\xe2\x96\x91";
+  const char* BM = "\xe2\x96\x92";
+  const char* BH = "\xe2\x96\x93";
+
   printf("%s[", AC(CLR_ENTROPY));
   for (int i = 0; i < ENTROPY_BAR_WIDTH; i++) {
-    putchar(i < filled ? '|' : ' ');
+    if (i < filled) {
+      if (i < ENTROPY_BAR_WIDTH / 3) {
+        fputs(BL, stdout);
+      } else if (i < 2 * ENTROPY_BAR_WIDTH / 3) {
+        fputs(BM, stdout);
+      } else {
+        fputs(BH, stdout);
+      }
+    } else {
+      putchar(' ');
+    }
   }
   printf("%s]%s ", AC(CLR_ENTROPY), AC(CLR_RESET));
 }
