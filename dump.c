@@ -20,10 +20,26 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
   size_t bytes_read;
   size_t dumped = 0;
 
+  if (start_offset < 0) {
+    fprintf(stderr, "error: offset negatif tidak valid\n");
+    return false;
+  }
+
   if (start_offset == 0) {
     stats->is_elf = detect_elf(file);
+
+    if (ferror(file)) {
+      perror("fread");
+      return false;
+    }
+
     if (stats->is_elf) {
       stats->elf_machine = read_elf_machine(file);
+
+      if (ferror(file)) {
+        perror("fread");
+        return false;
+      }
       rewind(file);
     }
   } else {
@@ -79,6 +95,10 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
     }
     putchar('\n');
 
+    if (ferror(stdout)) {
+      return false;
+    }
+
     for (size_t i = 0; i < bytes_read; i++) {
       unsigned char c = buffer[i];
       if (c == 0x00) {
@@ -94,6 +114,15 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
     dumped += bytes_read;
     stats->total_bytes += bytes_read;
     stats->total_lines++;
+  }
+
+  if (ferror(file)) {
+    perror("fread");
+    return false;
+  }
+
+  if (ferror(stdout)) {
+    return false;
   }
 
   return !ferror(file);

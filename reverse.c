@@ -43,7 +43,7 @@ bool reverse_hexdump(FILE* in, FILE* out) {
   char line[2048];
   size_t line_no = 0;
   bool success = true;
-  long current_pos = 0;
+  off_t current_pos = 0;
 
   while (fgets(line, sizeof(line), in)) {
     line_no++;
@@ -142,8 +142,8 @@ bool reverse_hexdump(FILE* in, FILE* out) {
       continue;
     }
 
-    if ((long)offset != current_pos) {
-      if (fseek(out, (long)offset, SEEK_SET) != 0) {
+    if ((off_t)offset != current_pos) {
+      if (fseeko(out, (off_t)offset, SEEK_SET) != 0) {
         fprintf(stderr, "warning: cannot seek to offset 0x%08zx (line %zu)\n", offset, line_no);
         success = false;
         continue;
@@ -156,6 +156,16 @@ bool reverse_hexdump(FILE* in, FILE* out) {
       continue;
     }
     current_pos = (long)(offset + byte_count);
+  }
+
+  if (ferror(in)) {
+    perror("fgets");
+    success = false;
+  }
+
+  if (ferror(out)) {
+    perror("fwrite");
+    success = false;
   }
 
   return success && !ferror(in);

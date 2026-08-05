@@ -1,8 +1,10 @@
+#include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
+#include <unistd.h>
 
 #include "include/cli.h"
 #include "include/dump.h"
@@ -20,7 +22,6 @@ int main(int argc, char* argv[]) {
     print_usage(argv[0]);
     return EXIT_SUCCESS;
   }
-
   if (args.version) {
     printf("hextool v1.0\n");
     return EXIT_SUCCESS;
@@ -31,38 +32,52 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  signal(SIGPIPE, SIG_IGN);
+
   if (args.reverse) {
-    FILE* in = fopen(args.input, "rb");
+    int rc = EXIT_FAILURE;
+    FILE* in = NULL;
+    FILE* out = NULL;
+
+    in = fopen(args.input, "rb");
     if (in == NULL) {
       perror(args.input);
-      return EXIT_FAILURE;
+      goto reverse_cleanup;
     }
-    FILE* out = fopen(args.output, "wb");
+
+    struct stat st_out;
+    if (stat(args.output, &st_out) == 0) {
+      if (!S_ISREG(st_out.st_mode)) {
+        fprintf(stderr, "error: %s sudah ada dan bukan file reguler\n", args.output);
+        goto reverse_cleanup;
+      }
+    }
+
+    out = fopen(args.output, "wb");
     if (out == NULL) {
       perror(args.output);
-      fclose(in);
-      return EXIT_FAILURE;
+      goto reverse_cleanup;
     }
+
     if (!reverse_hexdump(in, out)) {
       fprintf(stderr, "error: reverse hexdump gagal\n");
-      fclose(in);
-      fclose(out);
-      return EXIT_FAILURE;
+      goto reverse_cleanup;
     }
-    fclose(in);
-    fclose(out);
+
     printf("Reverse selesai: %s -> %s\n", args.input, args.output);
-    return EXIT_SUCCESS;
+    rc = EXIT_SUCCESS;
+
+  reverse_cleanup:
+    if (in) fclose(in);
+    if (out && fclose(out) != 0) {
+      perror(args.output);
+      rc = EXIT_FAILURE;
+    }
+    return rc;
   }
 
   if (strcmp(args.input, "-") == 0) {
     fprintf(stderr, "error: membaca dari stdin belum didukung\n");
-    return EXIT_FAILURE;
-  }
-
-  struct stat st;
-  if (stat(args.input, &st) == 0 && S_ISDIR(st.st_mode)) {
-    fprintf(stderr, "error: %s adalah direktori\n", args.input);
     return EXIT_FAILURE;
   }
 
@@ -72,22 +87,37 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  struct stat st;
+  if (fstat(fileno(file), &st) != 0) {
+    perror("fstat");
+    fclose(file);
+    return EXIT_FAILURE;
+  }
+  if (S_ISDIR(st.st_mode)) {
+    fprintf(stderr, "error: %s adalah direktori\n", args.input);
+    fclose(file);
+    return EXIT_FAILURE;
+  }
+
   setvbuf(stdout, NULL, _IOFBF, 65536);
 
   if (args.offset > 0) {
-    if (fseek(file, 0, SEEK_END) != 0) {
+    if (fseek(file, 0, SEEK_END) == 0) {
+      long file_size = ftell(file);
+      if (file_size >= 0 && args.offset >= file_size) {
+        fprintf(stderr, "error: offset (0x%lx) melebihi ukuran file (%ld byte)\n", args.offset,
+                file_size);
+        fclose(file);
+        return EXIT_FAILURE;
+      }
+      rewind(file);
+    } else if (errno == ESPIPE) {
+      rewind(file);
+    } else {
       perror("fseek");
       fclose(file);
       return EXIT_FAILURE;
     }
-    long file_size = ftell(file);
-    if (file_size >= 0 && args.offset >= file_size) {
-      fprintf(stderr, "error: offset (0x%lx) melebihi ukuran file (%ld byte)\n", args.offset,
-              file_size);
-      fclose(file);
-      return EXIT_FAILURE;
-    }
-    rewind(file);
   }
 
   DumpStatistik stats = {0};
@@ -103,5 +133,9 @@ int main(int argc, char* argv[]) {
   }
 
   print_hasil(args.input, &stats);
+
+  if (ferror(stdout)) {
+    return EXIT_FAILURE;
+  }
   return 0;
 }
