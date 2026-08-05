@@ -74,6 +74,23 @@ TEST(pattern_ascii_empty) {
   ASSERT(!pattern_is_active());
 }
 
+TEST(pattern_cross_line_highlight) {
+  ASSERT(pattern_init_ascii("FLAG{"));
+
+  unsigned char prev[16] = {[14] = 'F', [15] = 'L'};
+  unsigned char cur[16] = "AG{SECRET}";
+  bool hl[16] = {false};
+  pattern_compute_highlights(prev, 16, cur, 10, NULL, 0, hl);
+  ASSERT(!hl[0]);
+
+  unsigned char line[16] = {0};
+  line[14] = 'F';
+  line[15] = 'L';
+  pattern_compute_highlights(NULL, 0, line, 16, cur, 10, hl);
+  ASSERT(hl[14]);
+  ASSERT(!hl[15]);
+}
+
 TEST(cli_basic) {
   char* argv[] = {"hextool", "/bin/ls"};
   CliArgs args;
@@ -200,6 +217,7 @@ int main() {
   RUN(pattern_hex_empty);
   RUN(pattern_ascii_basic);
   RUN(pattern_ascii_empty);
+  RUN(pattern_cross_line_highlight);
   RUN(cli_basic);
   RUN(cli_offset_hex);
   RUN(cli_offset_dec);

@@ -1,8 +1,18 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+typedef struct {
+  double mean;
+  double m2;
+  double min;
+  double max;
+  size_t count;
+  size_t anomaly_high;
+  size_t anomaly_low;
+} EntropyStats;
 
 typedef struct {
   size_t total_bytes;
@@ -12,6 +22,7 @@ typedef struct {
   size_t high_count;
   bool is_elf;
   unsigned short elf_machine;
+  EntropyStats entropy;
 } DumpStatistik;
 
-#endif // !TYPES_H
+#endif  // !TYPES_H

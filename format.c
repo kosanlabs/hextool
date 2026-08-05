@@ -16,7 +16,7 @@ void print_offset(size_t offset) {
   printf("%s%08zx %s", AC(CLR_OFFSET), offset, AC(CLR_RESET));
 }
 
-static double calc_entropy(const unsigned char* buf, size_t n) {
+double calc_entropy(const unsigned char* buf, size_t n) {
   if (n == 0) {
     return 0.0;
   }
@@ -36,9 +36,51 @@ static double calc_entropy(const unsigned char* buf, size_t n) {
   return entropy;
 }
 
-void print_entropy_bar(const unsigned char* buf, size_t n) {
-  double e = calc_entropy(buf, n);
-  int filled = (int)((e / 8.0) * ENTROPY_BAR_WIDTH + 0.5);
+void entropy_update(EntropyStats* s, double e) {
+  s->count++;
+  double delta = e - s->mean;
+  s->mean += delta / (double)s->count;
+  s->m2 += delta * (e - s->mean);
+  if (s->count == 1 || e < s->min) {
+    s->min = e;
+  }
+  if (e > s->max) {
+    s->max = e;
+  }
+}
+
+void print_entropy_bar(double entropy, EntropyStats* stats) {
+  int filled;
+  const char* anomaly_mark = "";
+  const char* bar_color = AC(CLR_ENTROPY);
+
+  if (stats->count < ENTROPY_WARMUP) {
+    filled = (int)((entropy / 8.0) * ENTROPY_BAR_WIDTH + 0.5);
+  } else {
+    double variance = stats->m2 / (double)stats->count;
+    double stddev = sqrt(variance);
+
+    if (stddev < 0.001) {
+      filled = ENTROPY_BAR_WIDTH / 2;
+    } else {
+      double z = (entropy - stats->mean) / stddev;
+      filled = (int)(((z + 3.0) / 6.0) * ENTROPY_BAR_WIDTH + 0.5);
+
+      if (z > 2.0) {
+        anomaly_mark = "!";
+        bar_color = AC(CLR_ENTROPY_HIGH);
+        stats->anomaly_high++;
+      } else if (z < -2.0) {
+        anomaly_mark = ".";
+        bar_color = AC(CLR_ENTROPY_LOW);
+        stats->anomaly_low++;
+      }
+    }
+  }
+
+  if (filled < 0) {
+    filled = 0;
+  }
   if (filled > ENTROPY_BAR_WIDTH) {
     filled = ENTROPY_BAR_WIDTH;
   }
@@ -47,7 +89,7 @@ void print_entropy_bar(const unsigned char* buf, size_t n) {
   const char* BM = "\xe2\x96\x92";
   const char* BH = "\xe2\x96\x93";
 
-  printf("%s[", AC(CLR_ENTROPY));
+  printf("%s[%s", bar_color, AC(CLR_RESET));
   for (int i = 0; i < ENTROPY_BAR_WIDTH; i++) {
     if (i < filled) {
       if (i < ENTROPY_BAR_WIDTH / 3) {
@@ -61,7 +103,7 @@ void print_entropy_bar(const unsigned char* buf, size_t n) {
       putchar(' ');
     }
   }
-  printf("%s]%s ", AC(CLR_ENTROPY), AC(CLR_RESET));
+  printf("%s]%s%s ", bar_color, AC(CLR_RESET), anomaly_mark[0] ? anomaly_mark : " ");
 }
 
 void print_le32(const unsigned char* buf, size_t n) {
@@ -74,14 +116,15 @@ void print_le32(const unsigned char* buf, size_t n) {
   }
 }
 
-void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset) {
+void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset,
+               const bool* highlight) {
   for (size_t i = 0; i < BYTES_PER_LINE; i++) {
     if (i == 8) {
       putchar(' ');
     }
     if (i < bytes_read) {
       bool elf_pos = is_elf && (offset + i) < ELF_MAGIC_SIZE;
-      bool match = pattern_is_active() && pattern_match_at(buffer, bytes_read, i);
+      bool match = pattern_is_active() && highlight[i];
       printf("%s%02X%s ", char_color(buffer[i], elf_pos, match), (unsigned int)buffer[i],
              AC(CLR_RESET));
     } else {
@@ -90,11 +133,12 @@ void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size
   }
 }
 
-void print_ascii(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset) {
+void print_ascii(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset,
+                 const bool* highlight) {
   printf("%s|%s", AC(CLR_ASCII), AC(CLR_RESET));
   for (size_t i = 0; i < bytes_read; i++) {
     bool elf_pos = is_elf && (offset + i) < ELF_MAGIC_SIZE;
-    bool match = pattern_is_active() && pattern_match_at(buffer, bytes_read, i);
+    bool match = pattern_is_active() && highlight[i];
     printf("%s%c%s", char_color(buffer[i], elf_pos, match), printable_char(buffer[i]),
            AC(CLR_RESET));
   }

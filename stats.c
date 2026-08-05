@@ -50,4 +50,8 @@ void print_hasil(const char* filename, const DumpStatistik* stats) {
 
   printf("\n%sEntropy bar: [| = high randomness, empty = low randomness]%s\n", AC(CLR_DIM),
          AC(CLR_RESET));
+  if (stats->entropy.anomaly_high > 0 || stats->entropy.anomaly_low > 0) {
+    printf("%sEntropy anomalies: %zu high (!) / %zu low (.)%s\n", AC(CLR_DIM),
+           stats->entropy.anomaly_high, stats->entropy.anomaly_low, AC(CLR_RESET));
+  }
 }

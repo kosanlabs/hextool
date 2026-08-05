@@ -52,3 +52,33 @@ bool pattern_match_at(const unsigned char* buffer, size_t buf_len, size_t pos) {
   if (!s_has_pattern || pos + s_pat_len > buf_len) return false;
   return memcmp(buffer + pos, s_pattern, s_pat_len) == 0;
 }
+
+void pattern_compute_highlights(const unsigned char* prev, size_t prev_len,
+                                const unsigned char* cur, size_t cur_len,
+                                const unsigned char* next, size_t next_len,
+                                bool* highlight) {
+  if (!s_has_pattern || cur_len == 0) {
+    return;
+  }
+
+  unsigned char win[3 * BYTES_PER_LINE];
+  size_t wlen = 0;
+  if (prev) {
+    memcpy(win, prev, prev_len);
+    wlen += prev_len;
+  }
+  size_t cur_off = wlen;
+  memcpy(win + wlen, cur, cur_len);
+  wlen += cur_len;
+  if (next) {
+    memcpy(win + wlen, next, next_len);
+    wlen += next_len;
+  }
+
+  for (size_t pos = 0; pos < cur_len; pos++) {
+    if (cur_off + pos + s_pat_len <= wlen &&
+        memcmp(win + cur_off + pos, s_pattern, s_pat_len) == 0) {
+      highlight[pos] = true;
+    }
+  }
+}

@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "include/config.h"
@@ -40,12 +41,15 @@ static int hex_val(char chr) {
 }
 
 bool reverse_hexdump(FILE* in, FILE* out) {
-  char line[2048];
+  char* line = NULL;
+  size_t line_cap = 0;
+  ssize_t nread;
+
   size_t line_no = 0;
   bool success = true;
   off_t current_pos = 0;
 
-  while (fgets(line, sizeof(line), in)) {
+  while ((nread = getline(&line, &line_cap, in)) != -1) {
     line_no++;
     const char* p = line;
 
@@ -83,7 +87,7 @@ bool reverse_hexdump(FILE* in, FILE* out) {
       p = bracket_close + 1;
     }
 
-    while (*p == ' ' || *p == '\x1b') {
+    while (*p == ' ' || *p == '\x1b' || *p == '!' || *p == '.') {
       if (*p == '\x1b') {
         p = skip_ansi(p);
       } else {
@@ -158,8 +162,10 @@ bool reverse_hexdump(FILE* in, FILE* out) {
     current_pos = (long)(offset + byte_count);
   }
 
+  free(line);
+
   if (ferror(in)) {
-    perror("fgets");
+    perror("getline");
     success = false;
   }
 
