@@ -53,6 +53,10 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
 
     bytes_read = fread(buffer, 1, to_read, file);
     if (bytes_read == 0) {
+      if (ferror(file)) {
+        perror("fread");
+        return false;
+      }
       break;
     }
 

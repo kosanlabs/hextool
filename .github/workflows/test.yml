@@ -1,0 +1,17 @@
+name: testing
+
+on: [pull_request, push]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: check repository
+        uses: actions/checkout@v7
+
+      - name: build hextool
+        run: make all
+
+      - name: testing unittest
+        run: make test
