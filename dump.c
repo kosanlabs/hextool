@@ -21,7 +21,7 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
   size_t dumped = 0;
 
   if (start_offset < 0) {
-    fprintf(stderr, "error: offset negatif tidak valid\n");
+    fprintf(stderr, "error: negative offset is not valid\n");
     return false;
   }
 

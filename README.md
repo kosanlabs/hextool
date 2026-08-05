@@ -1,49 +1,49 @@
 # Warga slowy HexDump
 
-implement dasar dari hexdump dengan C.
+A basic hexdump implementation in C.
 
-## Tujuannya
+## Goals
 
 - binary file i/o
 - hex dump
-- baca elf header
-- baca arsitektur cpu
-- ngeparsing biner
-- baca little endian
+- read elf header
+- read cpu architecture
+- binary parsing
+- read little endian
 - reverse hexdump
 
-## Cara Menjalankannya
+## Usage
 
 ```bash
-# pakai makefile tinggal make
+# build with make
 make
 
-# untuk clear file executable dan object file
+# remove executables and object files
 make clean
 
-# contoh: ./hextool file_biner
-./hextool file_biner
+# example: ./hextool file_binary
+./hextool file_binary
 
-# cari & highlight pola hex (misal magic ELF)
-./hextool -s 7f454c46 file_biner
+# search & highlight hex pattern (e.g. ELF magic)
+./hextool -s 7f454c46 file_binary
 
-# cari & highlight pola ascii (misal flag CTF)
-./hextool -S "flag{" file_biner
+# search & highlight ascii pattern (e.g. CTF flag)
+./hextool -S "flag{" file_binary
 
-# matikan warna (berguna kalau output diarahkan ke file)
-./hextool -c file_biner > dump.txt
+# disable colors (useful when redirecting output to a file)
+./hextool -c file_binary > dump.txt
 
-# reverse hexdump jadi biner
+# reverse hexdump to binary
 ./hextool -r dump.txt output.bin
 
-# dump 256 byte dari offset 0x1000
-./hextool -o 0x1000 -n 256 file_biner
+# dump 256 bytes from offset 0x1000
+./hextool -o 0x1000 -n 256 file_binary
 
-# lihat header ELF saja (64 byte pertama)
-./hextool -n 64 file_biner
+# dump only the ELF header (first 64 bytes)
+./hextool -n 64 file_binary
 
-# lihat string di offset tertentu
-./hextool -o 0x2f20 -n 128 -S "libc" file_biner
+# dump a specific offset and search for a string
+./hextool -o 0x2f20 -n 128 -S "libc" file_binary
 ```
 
 ## Output result
@@ -57,12 +57,12 @@ make clean
 
 
 File           : hextool
-total bytesnya : 26272
-total line     : 1642
+Total bytes    : 26272
+Total lines    : 1642
 Format         : ELF Executable
-Arsitektur CPU : x86-64
+Architecture   : x86-64
 
-Detail byte:
+Byte details:
     # Null bytes (0x00)      : 15400 (58.6%)
     # Printable ASCII        : 5568 (21.2%)
     # High bytes (>= 0x80)   : 3154 (12.0%)

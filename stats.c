@@ -14,24 +14,24 @@ static double safe_pct(size_t part, size_t total) {
 void print_hasil(const char* filename, const DumpStatistik* stats) {
   printf("\n\n");
   printf("File           : %s%s%s\n", AC(CLR_BOLD), filename, AC(CLR_RESET));
-  printf("total bytesnya : %zu\n", stats->total_bytes);
-  printf("total line     : %zu\n", stats->total_lines);
+  printf("Total bytes    : %zu\n", stats->total_bytes);
+  printf("Total lines    : %zu\n", stats->total_lines);
 
   if (stats->is_elf) {
     printf("Format         : %sELF Executable%s\n", AC(CLR_ELF), AC(CLR_RESET));
-    printf("Arsitektur CPU : %s%s%s\n", AC(CLR_ARCH), machine_to_arch(stats->elf_machine),
+    printf("Architecture   : %s%s%s\n", AC(CLR_ARCH), machine_to_arch(stats->elf_machine),
            AC(CLR_RESET));
   }
   if (pattern_is_active()) {
-    printf("Pattern        : %sSEARCH AKTIF%s\n", AC(CLR_MATCH), AC(CLR_RESET));
+    printf("Pattern        : %sSEARCH ACTIVE%s\n", AC(CLR_MATCH), AC(CLR_RESET));
   }
 
   if (stats->total_bytes == 0) {
-    printf("\n %s [tidak ada detail byte untuk file kosong]%s\n", AC(CLR_DIM), AC(CLR_RESET));
+    printf("\n %s [no byte details for empty file]%s\n", AC(CLR_DIM), AC(CLR_RESET));
     return;
   }
 
-  printf("\nDetail byte:\n");
+  printf("\nByte details:\n");
   double pct_null = safe_pct(stats->null_count, stats->total_bytes);
   double pct_print = safe_pct(stats->print_count, stats->total_bytes);
   double pct_high = safe_pct(stats->high_count, stats->total_bytes);

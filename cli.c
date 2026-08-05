@@ -16,7 +16,7 @@ static const char* prog_name(const char* path) {
 void print_usage(const char* prog) {
   const char* name = prog_name(prog);
   fprintf(stderr,
-          "penggunaan: %s [options] <file> [output]\n"
+          "usage: %s [options] <file> [output]\n"
           "\n"
           "Dump mode (default):\n"
           "  %s [options] <file>\n"
@@ -25,16 +25,16 @@ void print_usage(const char* prog) {
           "  %s -r <dump.txt> <output.bin>\n"
           "\n"
           "Options:\n"
-          "  -h, --help          Tampilkan bantuan ini\n"
-          "  --version           Tampilkan versi\n"
-          "  -o <offset>         Mulai dump dari offset (hex/dec)\n"
-          "  -n <length>         Batasi jumlah byte yang di-dump\n"
-          "  -s <hex>            Cari & highlight pola hex\n"
-          "  -S <ascii>          Cari & highlight pola ASCII\n"
-          "  -c                  Matikan warna\n"
-          "  -r                  Reverse hexdump ke biner\n"
+          "  -h, --help          Show this help\n"
+          "  --version           Show version\n"
+          "  -o <offset>         Start dump at offset (hex/dec)\n"
+          "  -n <length>         Limit number of bytes to dump\n"
+          "  -s <hex>            Search & highlight hex pattern\n"
+          "  -S <ascii>          Search & highlight ASCII pattern\n"
+          "  -c                  Disable colors\n"
+          "  -r                  Reverse hexdump to binary\n"
           "\n"
-          "Contoh:\n"
+          "Examples:\n"
           "  %s /bin/ls\n"
           "  %s -c /bin/ls > dump.txt\n"
           "  %s -r dump.txt output.bin\n"
@@ -55,13 +55,13 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
   while (i < argc) {
     if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
       if (!pattern_init_hex(argv[i + 1])) {
-        fprintf(stderr, "error: pattern hex tidak valid\n");
+        fprintf(stderr, "error: invalid hex pattern\n");
         return false;
       }
       i += 2;
     } else if (strcmp(argv[i], "-S") == 0 && i + 1 < argc) {
       if (!pattern_init_ascii(argv[i + 1])) {
-        fprintf(stderr, "error: pattern ASCII tidak valid\n");
+        fprintf(stderr, "error: invalid ASCII pattern\n");
         return false;
       }
       i += 2;
@@ -70,7 +70,7 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
       errno = 0;
       out->offset = strtol(argv[i + 1], &endptr, 0);
       if (*endptr != '\0' || out->offset < 0 || errno == ERANGE) {
-        fprintf(stderr, "error: offset tidak valid: %s\n", argv[i + 1]);
+        fprintf(stderr, "error: invalid offset: %s\n", argv[i + 1]);
         return false;
       }
       i += 2;
@@ -79,7 +79,7 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
       errno = 0;
       out->length = strtoull(argv[i + 1], &endptr, 0);
       if (*endptr != '\0' || errno == ERANGE) {
-        fprintf(stderr, "error: length tidak valid: %s\n", argv[i + 1]);
+        fprintf(stderr, "error: invalid length: %s\n", argv[i + 1]);
         return false;
       }
       i += 2;
@@ -96,7 +96,7 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
       out->version = true;
       return true;
     } else if (argv[i][0] == '-') {
-      fprintf(stderr, "error: opsi tidak dikenal: %s\n", argv[i]);
+      fprintf(stderr, "error: unknown option: %s\n", argv[i]);
       print_usage(argv[0]);
       return false;
     } else {
@@ -105,7 +105,7 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
       } else if (out->output == NULL) {
         out->output = argv[i];
       } else {
-        fprintf(stderr, "error: terlalu banyak argumen\n");
+        fprintf(stderr, "error: too many arguments\n");
         print_usage(argv[0]);
         return false;
       }
@@ -122,7 +122,7 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
     return false;
   }
   if (out->reverse && out->output == NULL) {
-    fprintf(stderr, "error: mode reverse membutuhkan file output\n");
+    fprintf(stderr, "error: reverse mode requires an output file\n");
     print_usage(argv[0]);
     return false;
   }

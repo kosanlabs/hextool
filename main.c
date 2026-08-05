@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   }
 
   if ((args.offset > 0 || args.length > 0) && args.reverse) {
-    fprintf(stderr, "error: -o/-n tidak kompatibel dengan mode reverse\n");
+    fprintf(stderr, "error: -o/-n are not compatible with reverse mode\n");
     return EXIT_FAILURE;
   }
 
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     struct stat st_out;
     if (stat(args.output, &st_out) == 0) {
       if (!S_ISREG(st_out.st_mode)) {
-        fprintf(stderr, "error: %s sudah ada dan bukan file reguler\n", args.output);
+        fprintf(stderr, "error: %s exists and is not a regular file\n", args.output);
         goto reverse_cleanup;
       }
     }
@@ -60,11 +60,11 @@ int main(int argc, char* argv[]) {
     }
 
     if (!reverse_hexdump(in, out)) {
-      fprintf(stderr, "error: reverse hexdump gagal\n");
+      fprintf(stderr, "error: reverse hexdump failed\n");
       goto reverse_cleanup;
     }
 
-    printf("Reverse selesai: %s -> %s\n", args.input, args.output);
+    printf("Reverse done: %s -> %s\n", args.input, args.output);
     rc = EXIT_SUCCESS;
 
   reverse_cleanup:
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (strcmp(args.input, "-") == 0) {
-    fprintf(stderr, "error: membaca dari stdin belum didukung\n");
+    fprintf(stderr, "error: reading from stdin is not supported\n");
     return EXIT_FAILURE;
   }
 
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   if (S_ISDIR(st.st_mode)) {
-    fprintf(stderr, "error: %s adalah direktori\n", args.input);
+    fprintf(stderr, "error: %s is a directory\n", args.input);
     fclose(file);
     return EXIT_FAILURE;
   }
@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
     if (fseek(file, 0, SEEK_END) == 0) {
       long file_size = ftell(file);
       if (file_size >= 0 && args.offset >= file_size) {
-        fprintf(stderr, "error: offset (0x%lx) melebihi ukuran file (%ld byte)\n", args.offset,
+        fprintf(stderr, "error: offset (0x%lx) exceeds file size (%ld bytes)\n", args.offset,
                 file_size);
         fclose(file);
         return EXIT_FAILURE;
@@ -122,14 +122,14 @@ int main(int argc, char* argv[]) {
 
   DumpStatistik stats = {0};
   if (!dump_file(file, &stats, args.offset, args.length)) {
-    fprintf(stderr, "error: gagal membaca file %s\n", args.input);
+    fprintf(stderr, "error: failed to read file %s\n", args.input);
     fclose(file);
     return EXIT_FAILURE;
   }
   fclose(file);
 
   if (stats.total_lines == 0) {
-    fprintf(stderr, "warning: file kosong, tidak ada data untuk di-dump\n");
+    fprintf(stderr, "warning: file is empty, nothing to dump\n");
   }
 
   print_hasil(args.input, &stats);
