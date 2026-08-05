@@ -1,4 +1,5 @@
 #include "include/elf.h"
+
 #include "include/config.h"
 
 bool detect_elf(FILE* file) {
@@ -11,8 +12,12 @@ bool detect_elf(FILE* file) {
 
 unsigned short read_elf_machine(FILE* file) {
   unsigned char buf[ELF_MACHINE_SIZE];
-  if (fseek(file, ELF_MACHINE_OFFSET, SEEK_SET) != 0) return 0;
-  if (fread(buf, 1, ELF_MACHINE_SIZE, file) != ELF_MACHINE_SIZE) return 0;
+  if (fseek(file, ELF_MACHINE_OFFSET, SEEK_SET) != 0) {
+    return 0;
+  }
+  if (fread(buf, 1, ELF_MACHINE_SIZE, file) != ELF_MACHINE_SIZE) {
+    return 0;
+  }
   rewind(file);
   return (unsigned short)(buf[0] | (buf[1] << 8));
 }
@@ -91,7 +96,9 @@ const char* elf_field_name(size_t offset) {
     case 62:
       return "e_shstrndx";
     default:
-      if (offset >= 9 && offset < 16) return "e_ident";
+      if (offset >= 9 && offset < 16) {
+        return "e_ident";
+      }
       return NULL;
   }
 }

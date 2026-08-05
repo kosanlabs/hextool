@@ -9,7 +9,7 @@ typedef struct {
   const char* output;
   bool reverse;
   long offset;
-  size_t length;
+  unsigned long long length;
   bool help;
   bool version;
 } CliArgs;
