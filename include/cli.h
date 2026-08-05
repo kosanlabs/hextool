@@ -10,8 +10,11 @@ typedef struct {
   bool reverse;
   long offset;
   size_t length;
+  bool help;
+  bool version;
 } CliArgs;
 
 bool parse_args(int argc, char* argv[], CliArgs* out);
+void print_usage(const char* prog);
 
 #endif // !CLI_H
