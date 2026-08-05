@@ -5,6 +5,10 @@
 #include <ctype.h>
 #include <stdio.h>
 
+#ifdef __linux__
+#include <fcntl.h>
+#endif /* ifdef __linux__ */
+
 #include "include/color.h"
 #include "include/config.h"
 #include "include/elf.h"
@@ -27,7 +31,6 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
   }
 
 #ifdef __linux__
-#include <fcntl.h>
   posix_fadvise(fileno(file), start_offset, max_length ? (off_t)max_length : 0,
                 POSIX_FADV_SEQUENTIAL);
 #endif /* ifdef __linux__ */
