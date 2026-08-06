@@ -136,26 +136,8 @@ hextool -r <dump.txt> <output.bin>
 
 ## Output Format
 
-```
-00006660  [||      ] |00000011| 11 00 00 00 03 00 00 00  00 00 00 00 00 00 00 00  |................| ; e_ident[CLASS]
-00006670  [||      ] |00000000| 00 00 00 00 00 00 00 00  C2 5D 00 00 00 00 00 00  |.........]......|
-00006680  [||      ] |0000011e| 1E 01 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................| ; e_machine
-00006690  [        ] |00000001| 01 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+![image1](./github/images/screenshoot1.png)
 
-File           : hextool
-Total bytes    : 26272
-Total lines    : 1642
-Format         : ELF Executable
-Architecture   : x86-64
-
-Byte details:
-    # Null bytes (0x00)      : 15400 (58.6%)
-    # Printable ASCII        : 5568 (21.2%)
-    # High bytes (>= 0x80)   : 3154 (12.0%)
-    # Control / Low bytes    : 2150 (8.2%)
-
-Entropy bar: [| = high randomness, empty = low randomness]
-```
 ## Architecture Support
 
 `hextool` recognizes the following ELF machine types:
