@@ -136,7 +136,7 @@ hextool -r <dump.txt> <output.bin>
 
 ## Output Format
 
-![image1](./github/images/screenshoot1.png)
+![image1](.github/images/screenshoot1.png)
 
 ## Architecture Support
 
