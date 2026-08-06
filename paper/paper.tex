@@ -34,6 +34,10 @@
     sorting=none
 ]{biblatex}
 
+% methodology diagram
+\usepackage{tikz}
+\usepackage{tikz} \usetikzlibrary{ arrows.meta, positioning, shapes.geometric, fit, backgrounds }
+
 \addbibresource{references.bib}
 
 \title{Byte-Level Shannon Entropy Profiling for Binary Data Analysis}
@@ -236,5 +240,123 @@ The experimental pipeline consists of four primary stages:
     \item entropy estimation;
     \item statistical analysis of entropy profiles;
 \end{enumerate}
+
+% \includegraphics[width=0.9\linewidth]{methodology-pipline.pdf}
+% Example Entropy anomalies: 78 high (!) / 600 low (.) 
+
+\section{Dataset}
+
+The experimental dataset should contain multiple classes data.
+
+\begin{table}[H]
+    \centering
+    \caption{
+    Proposed Categories for experimental dataset
+    }
+
+    \label{tab:dataset}
+    \begin{tabular}{lll}
+         \toprule
+         Category & Examples & Purpose \\
+         \midrule
+         Textual
+            & TXT, source code, JSON
+            & Low-entropy baseline \\
+
+        Structured Binary
+            & ELF, PDF, SQLite
+            & Heterogeneous structure \\
+
+        Compressed
+            & GZIP, ZIP, XZ
+            & Cryptographic baseline \\
+
+        Random
+            & Pseudorandom bytes
+            & Statistical baseline \\
+
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% 4.2 bagian windowing
+
+\subsection{Entropy Windowing}
+
+Given a binary sequence $B$, the sequence is divide into of size $W$
+
+For window $i$:
+\begin{equation}
+    H_i = -\sum_{b=0}^{255}
+    p_i(b)\log_2p_i(b).
+\end{equation}
+
+The resulting sequence
+
+\begin{equation}
+    \mathcal{H} = {H_1,H_2,\ldots,H_n}
+\end{equation}
+
+forms the entropy profile of the binary file.
+
+% 4.3 window size
+
+\subsection{Window Size Evaluation}
+
+The following window size are evaluated
+
+\begin{equation}
+    W \in \{16, 32, 64, 128, 256, 512, 1024, 4096\}.
+\end{equation}
+
+This experiment evaluates the trade-off between spatial resolution and
+statistical stability.
+
+% 4.4 shannon entopi nya
+
+\subsection{Shannon Entropy Estimator}
+
+For each window, byte frequencies are counted and convert into empirical probabilities.
+
+The entropy estimator is
+
+\begin{equation}
+    \hat{H}(W) = -\sum_{b=0}^{255}
+    \hat{p}_W(b) \log_2
+    \hat{p}_W(b)
+\end{equation}
+
+Terms where
+
+\[\hat{P}_W(b)=0\]
+
+are excluded from summation.
+
+% 4.5 local entropy
+
+\subsection{Localized Entropy Profiling}
+
+For a binary file consisting of $N$ entropy windows, the mean entropy defined as
+
+\begin{equation}
+    \mu_H = \frac{1}{N} \sum_{i=1}^{N}H_i
+\end{equation}
+
+The standard deviation is
+
+\begin{equation}
+    \sigma_H = \sqrt{\frac{1}{N} \sum_{i=1}^{N}
+    (H_i-\mu_H)^2
+    }.
+\end{equation}
+
+A standardized entropy score can then be defined as
+
+\begin{equation}
+    z_i = \frac{H_i-\mu_H}{\sigma_H}
+\end{equation}
+
+These score are used to identify windows whose entropy differs
+substantially from the overall file distribution.
 
 \end{document}
