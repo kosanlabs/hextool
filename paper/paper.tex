@@ -40,6 +40,7 @@
 \author{
     Arfy Slowy\\
     Warga Slowy\\
+    \\
     \texttt{slowy.arfy@proton.me}
 }
 
@@ -49,7 +50,7 @@
 
 \maketitle
 
-\begin{abstract} Binary files contain heterogeneous regions with substantially different statistical properties. Structured metadata, executable instructions, textual content, compressed data, and encrypted data may exhibit different distributions of byte values. Shannon entropy provides a compact information-theoretic measure that can be used to characterize these distributions. This paper presents an empirical study of byte-level Shannon entropy profiling for binary data analysis. We investigate how entropy estimation window size affects the observed entropy of binary data and evaluate whether localized entropy profiles can distinguish different classes of binary content. We implement the proposed analysis in \texttt{hextool}, an open-source command-line binary analysis utility. The study evaluates entropy profiles across structured, textual, executable, compressed, encrypted, and pseudorandom data. We further investigate the use of local entropy deviations for identifying statistically distinct regions within binary files. The results aim to clarify both the usefulness and limitations of Shannon entropy as a lightweight statistical descriptor for binary data analysis. \end{abstract}
+\begin{abstract} Binary files contain heterogeneous regions with substantially different statistical properties. Structured metadata, executable instructions, textual content, compressed data, and encrypted data may exhibit different distributions of byte values. Shannon entropy provides a compact information-theoretic measure that can be used to characterize these distributions. This paper presents an empirical study of byte-level Shannon entropy profiling for binary data analysis. We investigate how the size of the entropy estimation window affects the observed entropy of binary data and evaluate whether localized entropy profiles can distinguish different classes of binary content. We implement the proposed analysis in \texttt{hextool}, an open-source command-line binary analysis utility. The study evaluates entropy profiles in structured, textual, executable, compressed, encrypted, and pseudorandom data. We further investigate the use of local entropy deviations to identify statistically distinct regions within binary files. The results aim to clarify both the usefulness and limitations of Shannon entropy as a lightweight statistical descriptor for binary data analysis. \end{abstract}
 
 % keywords
 
@@ -72,7 +73,7 @@ Binary files are fundamental artifacts in modern computing systems. Executable p
 
 where $p(x)$ represents the probability of observing byte value $x$.
 
-Because a byte contains eight bits, the theoritical upper bound of the entropy is
+Because a byte contains eight bits, the theoretical upper bound of the entropy is
 
 \begin{equation}
     0 \leq H(X) \leq 8
@@ -80,7 +81,7 @@ Because a byte contains eight bits, the theoritical upper bound of the entropy i
 
 bits per byte.
 
-However, applying Shannon entropy directly to binary files raises several methodological questions. In particular, entropy is estimated from finite samples, and the selected observation window can substantially affect the resulting estimate. Small windows may provide high spatial larger windows may provide more stable estimates while reducing spatial resolution.
+However, applying Shannon entropy directly to binary files raises several methodological questions. In particular, entropy is estimated from finite samples, and the selected observation window can substantially affect the resulting estimate. Small windows may provide high spatial resolution, while larger windows may provide more stable estimates at the cost of reduced spatial resolution.
 
 This paper therefore investigates byte-level entropy profiling as a method for binary data analysis.
 
@@ -95,13 +96,13 @@ This study investigates the following research questions.
     How does entropy estimation window size affect byte-level Shannon entropy measurements?
     
     \item[RQ2.]
-    How dow Shannon entropy profiles differ across different of binary data ?
+    How do Shannon entropy profiles differ across different classes of binary data?
 
     \item[RQ3.]
-    Can localized entropy measurements identify statistic distinct regions within binary files?
+    Can localized entropy measurements identify statistically distinct regions within binary files?
 
     \item[RQ4.]
-    What are the limitations of Shannon entropy when used properties such as compression, encryption, or randomness?
+    What are the limitations of Shannon entropy when used to identify properties such as compression, encryption, or randomness?
 \end{description}
 
 % 1.2 contributions
@@ -114,7 +115,7 @@ This paper makes the following contributions:
     An empirical characterization of byte-level Shannon entropy across multiple classes of binary data.
 
     \item
-    An evaluation of the effect of entropy estimation window size on entropy measurements
+    An evaluation of the effect of entropy estimation window size on entropy measurements.
 
     \item 
     A localized entropy profiling method for identifying statistically distinct regions in binary files. 
@@ -125,5 +126,115 @@ This paper makes the following contributions:
     \item A reproducible experimental methodology for evaluating entropy-based binary analysis.
 \end{enumerate}
 
-\end{document}
+% 2.background
 
+\section{Background}
+
+\subsection{Information Entropy}
+
+Shannon entropy quantifies the uncertainty associated with a probability distribution.
+For a discrete random variable $X$ with possible outcomes $x_1, \dots, x_n$, Shannon entropy is defined as
+
+\begin{equation}
+    H(X)
+    =
+    -\sum_{i=1}^{n}
+    p(x_i)\log_2 p(x_i).
+\end{equation}
+
+For byte-oriented data, the set of possible outcomes contains 256 values:
+
+\begin{equation}
+    \mathcal{B}
+    =
+    \{0,1,\ldots,255\}
+\end{equation}
+
+Therefore,
+
+\begin{equation}
+    H(x)
+    =
+    -\sum_{b\in\mathcal{B}}
+    p(b)\log_2p(b)
+\end{equation}
+
+\subsection{Byte Distribution}
+
+Given a byte sequence
+
+\begin{equation}
+    B = (b_1, b_2,\ldots,b_N),
+\end{equation}
+
+the empirical probability of byte value $b$ can be estimated as
+
+\begin{equation}
+    \hat{p}(b) = \frac{f(b)}{N},
+\end{equation}
+
+where $f(b)$ denotes the number of occurrences of byte value $b$.
+
+\subsection{Finite-Sample Entropy Estimation}
+
+In practical binary analysis, entropy is estimated from a finite
+number of bytes. Therefore, the observed entropy depends not only on the underlying
+data-generating process but also on the number of samples used for estimation.
+
+This property becomes particularly important when the observation window is substantially 
+smaller than the number of possible byte values.
+
+
+% 3. related works
+% capek waks
+
+\section{Related Work}
+
+\subsection{Entropy in Information Theory}
+
+Discuss classical information theory and Shannon entropy.
+
+\subsection{Entropy-Based Binary Analysis}
+
+Discuss previous application of entropy to:
+
+\begin{itemize}
+    \item binary analysis;
+    \item malware analysis;
+    \item executable analysis;
+    \item compressed data detection;
+    \item encrypted data detection;
+    \item file structure analysis;
+\end{itemize}
+
+\subsection{Information Theory in Software Engineering}
+
+Discuss research applying information-theoretic measures to software artifacts and software evolution.
+
+\subsection{Research Gap}
+
+Existing work demonstrates that entropy can provide useful statistical information about digital artifacts. However, this paper focuses specifically on the relationship between:
+
+\begin{enumerate}
+    \item byte-level entropy;
+    \item observation window size;
+    \item binary data category;
+    \item localized entropy variation;
+\end{enumerate}
+
+% 4. methodology
+
+\section{Methodology}
+
+\subsection{Overview}
+
+The experimental pipeline consists of four primary stages:
+
+\begin{enumerate}
+    \item binary data collection;
+    \item byte-window segmentation;
+    \item entropy estimation;
+    \item statistical analysis of entropy profiles;
+\end{enumerate}
+
+\end{document}
