@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,6 +6,7 @@
 
 #include "../include/cli.h"
 #include "../include/elf.h"
+#include "../include/format.h"
 #include "../include/pattern.h"
 #include "../include/reverse.h"
 
@@ -211,6 +213,64 @@ TEST(reverse_single_line) {
   fclose(out);
 }
 
+TEST(entropy_empty) {
+  ASSERT_EQ(calc_entropy(NULL, 0), 0.0);
+}
+
+TEST(entropy_constant_byte) {
+  unsigned char buf[] = {0x41, 0x41, 0x41, 0x41};
+  ASSERT_EQ(calc_entropy(buf, 4), 0.0);
+}
+
+TEST(entropy_two_values) {
+  unsigned char buf[] = {0x00, 0x00, 0xFF, 0xFF};
+  ASSERT(fabs(calc_entropy(buf, 4) - 1.0) < 1e-9);
+}
+
+TEST(entropy_four_values) {
+  unsigned char buf[] = {0x00, 0x11, 0x22, 0x33};
+  ASSERT(fabs(calc_entropy(buf, 4) - 2.0) < 1e-9);
+}
+
+TEST(entropy_uniform) {
+  unsigned char buf[256];
+  for (int i = 0; i < 256; i++) buf[i] = (unsigned char)i;
+  ASSERT(fabs(calc_entropy(buf, 256) - 8.0) < 1e-9);
+}
+
+TEST(entropy_stats_stream) {
+  EntropyStats s = {0};
+  entropy_update(&s, 1.0);
+  entropy_update(&s, 2.0);
+  entropy_update(&s, 3.0);
+  ASSERT_EQ(s.count, 3);
+  ASSERT(fabs(s.mean - 2.0) < 1e-9);
+  ASSERT_EQ(s.min, 1.0);
+  ASSERT_EQ(s.max, 3.0);
+}
+
+TEST(entropy_anomaly_high) {
+  EntropyStats s = {0};
+  double warm[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0};
+  for (size_t i = 0; i < sizeof(warm) / sizeof(warm[0]); i++) {
+    entropy_update(&s, warm[i]);
+  }
+  ASSERT_EQ(s.anomaly_high, 0);
+  entropy_update(&s, 8.0);
+  ASSERT_EQ(s.anomaly_high, 1);
+}
+
+TEST(entropy_anomaly_low) {
+  EntropyStats s = {0};
+  double warm[] = {7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.5};
+  for (size_t i = 0; i < sizeof(warm) / sizeof(warm[0]); i++) {
+    entropy_update(&s, warm[i]);
+  }
+  ASSERT_EQ(s.anomaly_low, 0);
+  entropy_update(&s, 0.0);
+  ASSERT_EQ(s.anomaly_low, 1);
+}
+
 int main() {
   RUN(pattern_hex_valid);
   RUN(pattern_hex_with_spaces);
@@ -235,6 +295,14 @@ int main() {
   RUN(elf_field_name_unknown);
   RUN(reverse_single_line);
   RUN(reverse_input_kosong);
+  RUN(entropy_empty);
+  RUN(entropy_constant_byte);
+  RUN(entropy_two_values);
+  RUN(entropy_four_values);
+  RUN(entropy_uniform);
+  RUN(entropy_stats_stream);
+  RUN(entropy_anomaly_high);
+  RUN(entropy_anomaly_low);
 
   printf("  \033[32m%d passed\033[0m  |  \033[31m%d failed\033[0m\n", g_pass, g_fail);
 

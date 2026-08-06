@@ -10,7 +10,7 @@ void print_offset(size_t offset);
 
 double calc_entropy(const unsigned char* buf, size_t n);
 void entropy_update(EntropyStats* s, double e);
-void print_entropy_bar(double entropy, EntropyStats* stats);
+void print_entropy_bar(double entropy, EntropyStats* stats, const char** out_anomaly_mark, const char** out_bar_color);
 void print_le32(const unsigned char* buf, size_t n);
 void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset,
                const bool* highlight);

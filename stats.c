@@ -1,5 +1,6 @@
 #include "include/stats.h"
 
+#include <math.h>
 #include <stdio.h>
 
 #include "include/color.h"
@@ -9,6 +10,41 @@
 
 static double safe_pct(size_t part, size_t total) {
   return total ? (part * 100.0 / total) : 0.0;
+}
+
+static void print_entropy_summary(const EntropyStats* s) {
+  if (s->count == 0) {
+    return;
+  }
+
+  double variance = s->m2 / (double)s->count;
+  double stddev = sqrt(variance);
+
+  printf("\n%sEntropy analysis (adaptive):%s\n", AC(CLR_BOLD), AC(CLR_RESET));
+  printf("    Lines sampled          : %zu\n", s->count);
+  printf("    Mean entropy           : %.3f bits/byte\n", s->mean);
+  printf("    Std deviation          : %.3f\n", stddev);
+  printf("    Range                  : %.3f .. %.3f\n", s->min, s->max);
+
+  if (s->anomaly_high > 0 || s->anomaly_low > 0) {
+    printf("    %sHigh anomalies (>+2 sigma) : %zu%s\n", AC(CLR_ENTROPY_HIGH), s->anomaly_high,
+           AC(CLR_RESET));
+    printf("    %sLow anomalies  (<-2 sigma) : %zu%s\n", AC(CLR_ENTROPY_LOW), s->anomaly_low,
+           AC(CLR_RESET));
+  } else {
+    printf("    Anomalies (>2 sigma)        : none\n");
+  }
+
+  if (s->mean > 7.5) {
+    printf("    %sHeuristic%s              : likely encrypted or compressed\n",
+           AC(CLR_ENTROPY_HIGH), AC(CLR_RESET));
+  } else if (s->mean < 2.0) {
+    printf("    %sHeuristic%s              : likely sparse / padding\n", AC(CLR_ENTROPY_LOW),
+           AC(CLR_RESET));
+  } else if (stddev > 2.0) {
+    printf("    %sHeuristic%s              : mixed content (code + data)\n", AC(CLR_ENTROPY),
+           AC(CLR_RESET));
+  }
 }
 
 void print_hasil(const char* filename, const DumpStatistik* stats) {
@@ -27,7 +63,7 @@ void print_hasil(const char* filename, const DumpStatistik* stats) {
   }
 
   if (stats->total_bytes == 0) {
-    printf("\n %s [no byte details for empty file]%s\n", AC(CLR_DIM), AC(CLR_RESET));
+    printf("\n  %s [no byte details for empty file]%s\n", AC(CLR_DIM), AC(CLR_RESET));
     return;
   }
 
@@ -50,8 +86,8 @@ void print_hasil(const char* filename, const DumpStatistik* stats) {
 
   printf("\n%sEntropy bar: [| = high randomness, empty = low randomness]%s\n", AC(CLR_DIM),
          AC(CLR_RESET));
-  if (stats->entropy.anomaly_high > 0 || stats->entropy.anomaly_low > 0) {
-    printf("%sEntropy anomalies: %zu high (!) / %zu low (.)%s\n", AC(CLR_DIM),
-           stats->entropy.anomaly_high, stats->entropy.anomaly_low, AC(CLR_RESET));
-  }
+  printf("    %s(adaptive after %d lines: z-score scale, ! = +2 sigma anomaly, . = -2 sigma)%s\n",
+         AC(CLR_DIM), ENTROPY_WARMUP, AC(CLR_RESET));
+
+  print_entropy_summary(&stats->entropy);
 }

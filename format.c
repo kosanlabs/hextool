@@ -47,12 +47,27 @@ void entropy_update(EntropyStats* s, double e) {
   if (e > s->max) {
     s->max = e;
   }
+
+  if (s->count > ENTROPY_WARMUP) {
+    double variance = s->m2 / (double)s->count;
+    double stddev = sqrt(variance);
+    if (stddev >= 0.001) {
+      double z = (e - s->mean) / stddev;
+      if (z > 2.0) {
+        s->anomaly_high++;
+      }
+      if (z < -2.0) {
+        s->anomaly_low++;
+      }
+    }
+  }
 }
 
-void print_entropy_bar(double entropy, EntropyStats* stats) {
+void print_entropy_bar(double entropy, EntropyStats* stats, const char** out_anomaly_mark,
+                       const char** out_bar_color) {
   int filled;
-  const char* anomaly_mark = "";
-  const char* bar_color = AC(CLR_ENTROPY);
+  *out_anomaly_mark = "";
+  *out_bar_color = AC(CLR_ENTROPY);
 
   if (stats->count < ENTROPY_WARMUP) {
     filled = (int)((entropy / 8.0) * ENTROPY_BAR_WIDTH + 0.5);
@@ -67,13 +82,11 @@ void print_entropy_bar(double entropy, EntropyStats* stats) {
       filled = (int)(((z + 3.0) / 6.0) * ENTROPY_BAR_WIDTH + 0.5);
 
       if (z > 2.0) {
-        anomaly_mark = "!";
-        bar_color = AC(CLR_ENTROPY_HIGH);
-        stats->anomaly_high++;
+        *out_anomaly_mark = "!";
+        *out_bar_color = AC(CLR_ENTROPY_HIGH);
       } else if (z < -2.0) {
-        anomaly_mark = ".";
-        bar_color = AC(CLR_ENTROPY_LOW);
-        stats->anomaly_low++;
+        *out_anomaly_mark = ".";
+        *out_bar_color = AC(CLR_ENTROPY_LOW);
       }
     }
   }
@@ -89,7 +102,7 @@ void print_entropy_bar(double entropy, EntropyStats* stats) {
   const char* BM = "\xe2\x96\x92";
   const char* BH = "\xe2\x96\x93";
 
-  printf("%s[%s", bar_color, AC(CLR_RESET));
+  printf("%s[%s", *out_bar_color, AC(CLR_RESET));
   for (int i = 0; i < ENTROPY_BAR_WIDTH; i++) {
     if (i < filled) {
       if (i < ENTROPY_BAR_WIDTH / 3) {
@@ -103,7 +116,8 @@ void print_entropy_bar(double entropy, EntropyStats* stats) {
       putchar(' ');
     }
   }
-  printf("%s]%s%s ", bar_color, AC(CLR_RESET), anomaly_mark[0] ? anomaly_mark : " ");
+  printf("%s]%s%s ", *out_bar_color, AC(CLR_RESET),
+         (*out_anomaly_mark)[0] ? *out_anomaly_mark : " ");
 }
 
 void print_le32(const unsigned char* buf, size_t n) {
