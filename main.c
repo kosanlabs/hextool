@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
   if (args.version) {
-    printf("hextool v1.0\n");
+    printf("hextool v1.0.0.13\n");
     return EXIT_SUCCESS;
   }
 
