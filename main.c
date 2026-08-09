@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "include/cli.h"
+#include "include/diff.h"
 #include "include/dump.h"
 #include "include/reverse.h"
 #include "include/stats.h"
@@ -33,6 +34,11 @@ int main(int argc, char* argv[]) {
   }
 
   signal(SIGPIPE, SIG_IGN);
+
+  if (args.diff_file) {
+    int rc = diff_files(args.diff_file, args.input);
+    return rc < 0 ? 2 : rc;
+  }
 
   if (args.reverse) {
     int rc = EXIT_FAILURE;

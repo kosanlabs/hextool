@@ -28,24 +28,29 @@ void print_usage(const char* prog) {
           "Reverse mode:\n"
           "  %s -r <dump.txt> <output.bin>\n"
           "\n"
+          "Diff mode:\n"
+          "  %s -d <file2> <file>\n"
+          "\n"
           "Options:\n"
-          "  -h, --help       Show this help\n"
-          "  --version        Show version\n"
-          "  -o <offset>      Start dump at offset (hex/dec)\n"
-          "  -n <length>      Limit number of bytes to dump\n"
-          "  -s <hex>         Search & highlight hex pattern\n"
-          "  -S <string>      Search & highlight ASCII pattern\n"
-          "  -b               Show big-endian 32-bit preview\n"
-          "  -c               Disable colors\n"
-          "  -r               Reverse hexdump to binary\n"
+          "  -h, --help          Show this help\n"
+          "  --version           Show version\n"
+          "  -o <offset>         Start dump at offset (hex/dec)\n"
+          "  -n <length>         Limit number of bytes to dump\n"
+          "  -s <hex>            Search & highlight hex pattern\n"
+          "  -S <string>         Search & highlight ASCII pattern\n"
+          "  -b                  Show big-endian 32-bit preview\n"
+          "  -c                  Disable colors\n"
+          "  -r                  Reverse hexdump to binary\n"
+          "  -d <file>           Diff mode: compare input against <file>\n"
           "\n"
           "Examples:\n"
           "  %s /bin/ls\n"
           "  %s -c /bin/ls > dump.txt\n"
           "  %s -r dump.txt output.bin\n"
           "  %s -o 0x1000 -n 256 /bin/ls\n"
-          "  %s -b /bin/ls\n",
-          name, name, name, name, name, name, name, name, name);
+          "  %s -b /bin/ls\n"
+          "  %s -d /bin/ls.other /bin/ls\n",
+           name, name, name, name, name, name, name, name, name, name);
 }
 
 bool parse_args(int argc, char* argv[], CliArgs* out) {
@@ -89,6 +94,9 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
         fprintf(stderr, "error: invalid length: %s\n", argv[i + 1]);
         return false;
       }
+      i += 2;
+    } else if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
+      out->diff_file = argv[i + 1];
       i += 2;
     } else if (strcmp(argv[i], "-b") == 0) {
       out->big_endian = true;
@@ -136,5 +144,16 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
     print_usage(argv[0]);
     return false;
   }
+
+  if (out->diff_file && (out->offset > 0 || out->length > 0 || out->output)) {
+    fprintf(stderr, "error: diff mode is incompatible with -o/-n and output file\n");
+    return false;
+  }
+
+  if (out->diff_file && pattern_is_active()) {
+    fprintf(stderr, "error: pattern search is not compatible with diff mode\n");
+    return false;
+  }
+
   return true;
 }

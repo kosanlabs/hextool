@@ -7,6 +7,7 @@
 typedef struct {
   const char* input;
   const char* output;
+  const char* diff_file;
   bool reverse;
   long offset;
   unsigned long long length;

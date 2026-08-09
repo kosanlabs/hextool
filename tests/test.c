@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../include/cli.h"
+#include "../include/diff.h"
 #include "../include/elf.h"
 #include "../include/format.h"
 #include "../include/pattern.h"
@@ -271,6 +273,62 @@ TEST(entropy_anomaly_low) {
   ASSERT_EQ(s.anomaly_low, 1);
 }
 
+static void write_file(const char* path, const char* data, size_t n) {
+  FILE* f = fopen(path, "wb");
+  ASSERT(f != NULL);
+  fwrite(data, 1, n, f);
+  fclose(f);
+}
+
+TEST(diff_identical) {
+  char p1[] = "/tmp/hextool_diff_XXXXXX";
+  char p2[] = "/tmp/hextool_diff_XXXXXX";
+  int fd1 = mkstemp(p1);
+  int fd2 = mkstemp(p2);
+  ASSERT(fd1 >= 0 && fd2 >= 0);
+  close(fd1);
+  close(fd2);
+  write_file(p1, "hello", 5);
+  write_file(p2, "hello", 5);
+  ASSERT_EQ(diff_files(p1, p2), 0);
+  unlink(p1);
+  unlink(p2);
+}
+
+TEST(diff_differs) {
+  char p1[] = "/tmp/hextool_diff_XXXXXX";
+  char p2[] = "/tmp/hextool_diff_XXXXXX";
+  int fd1 = mkstemp(p1);
+  int fd2 = mkstemp(p2);
+  ASSERT(fd1 >= 0 && fd2 >= 0);
+  close(fd1);
+  close(fd2);
+  write_file(p1, "hello", 5);
+  write_file(p2, "world", 5);
+  ASSERT_EQ(diff_files(p1, p2), 1);
+  unlink(p1);
+  unlink(p2);
+}
+
+TEST(diff_length_mismatch) {
+  char p1[] = "/tmp/hextool_diff_XXXXXX";
+  char p2[] = "/tmp/hextool_diff_XXXXXX";
+  int fd1 = mkstemp(p1);
+  int fd2 = mkstemp(p2);
+  ASSERT(fd1 >= 0 && fd2 >= 0);
+  close(fd1);
+  close(fd2);
+  write_file(p1, "", 0);
+  write_file(p2, "\x00", 1);
+  ASSERT_EQ(diff_files(p1, p2), 1);
+  unlink(p1);
+  unlink(p2);
+}
+
+TEST(diff_missing_file) {
+  ASSERT_EQ(diff_files("/nonexistent_a_xyz", "/nonexistent_b_xyz"), -1);
+}
+
 int main() {
   RUN(pattern_hex_valid);
   RUN(pattern_hex_with_spaces);
@@ -303,6 +361,10 @@ int main() {
   RUN(entropy_stats_stream);
   RUN(entropy_anomaly_high);
   RUN(entropy_anomaly_low);
+  RUN(diff_identical);
+  RUN(diff_differs);
+  RUN(diff_length_mismatch);
+  RUN(diff_missing_file);
 
   printf("  \033[32m%d passed\033[0m  |  \033[31m%d failed\033[0m\n", g_pass, g_fail);
 

@@ -69,6 +69,15 @@ hextool [options] <file>
 hextool -r <dump.txt> <output.bin>
 ```
 
+### Diff Mode
+
+```bash
+hextool -d <file2> <file>
+```
+
+Compares two files byte by byte, highlighting differing bytes in each line.
+Exits `0` when identical, `1` when files differ, `2` on error.
+
 ### Options
 
 | Flag | Long | Argument | Description |
@@ -81,6 +90,7 @@ hextool -r <dump.txt> <output.bin>
 | `-S` | | `<string>` | Search & highlight ASCII pattern (e.g. `flag{`) |
 | `-c` | |  | Disable colored output |
 | `-r` | |  | Reverse hexdump: convert dump text back to binary |
+| `-d` | | `<file>` | Diff mode: compare input against `<file>` |
 
 
 ## Examples
