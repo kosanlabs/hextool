@@ -10,13 +10,17 @@
 
 static const char* prog_name(const char* path) {
   const char* slash = strrchr(path, '/');
-  return slash ? slash + 1 : path;
+  if (slash) {
+    return slash + 1;
+  }
+
+  return path;
 }
 
 void print_usage(const char* prog) {
   const char* name = prog_name(prog);
   fprintf(stderr,
-          "usage: %s [options] <file> [output]\n"
+          "usage: %s [options] <input> [output]\n"
           "\n"
           "Dump mode (default):\n"
           "  %s [options] <file>\n"
@@ -25,21 +29,23 @@ void print_usage(const char* prog) {
           "  %s -r <dump.txt> <output.bin>\n"
           "\n"
           "Options:\n"
-          "  -h, --help          Show this help\n"
-          "  --version           Show version\n"
-          "  -o <offset>         Start dump at offset (hex/dec)\n"
-          "  -n <length>         Limit number of bytes to dump\n"
-          "  -s <hex>            Search & highlight hex pattern\n"
-          "  -S <ascii>          Search & highlight ASCII pattern\n"
-          "  -c                  Disable colors\n"
-          "  -r                  Reverse hexdump to binary\n"
+          "  -h, --help       Show this help\n"
+          "  --version        Show version\n"
+          "  -o <offset>      Start dump at offset (hex/dec)\n"
+          "  -n <length>      Limit number of bytes to dump\n"
+          "  -s <hex>         Search & highlight hex pattern\n"
+          "  -S <string>      Search & highlight ASCII pattern\n"
+          "  -b               Show big-endian 32-bit preview\n"
+          "  -c               Disable colors\n"
+          "  -r               Reverse hexdump to binary\n"
           "\n"
           "Examples:\n"
           "  %s /bin/ls\n"
           "  %s -c /bin/ls > dump.txt\n"
           "  %s -r dump.txt output.bin\n"
-          "  %s -o 0x1000 -n 256 /bin/ls\n",
-          name, name, name, name, name, name, name);
+          "  %s -o 0x1000 -n 256 /bin/ls\n"
+          "  %s -b /bin/ls\n",
+          name, name, name, name, name, name, name, name, name);
 }
 
 bool parse_args(int argc, char* argv[], CliArgs* out) {
@@ -50,6 +56,7 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
   out->length = 0;
   out->help = false;
   out->version = false;
+  out->big_endian = false;
 
   int i = 1;
   while (i < argc) {
@@ -69,7 +76,7 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
       char* endptr;
       errno = 0;
       out->offset = strtol(argv[i + 1], &endptr, 0);
-      if (*endptr != '\0' || out->offset < 0 || errno == ERANGE) {
+      if ((*endptr != '\0') || (errno == ERANGE)) {
         fprintf(stderr, "error: invalid offset: %s\n", argv[i + 1]);
         return false;
       }
@@ -78,18 +85,21 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
       char* endptr;
       errno = 0;
       out->length = strtoull(argv[i + 1], &endptr, 0);
-      if (*endptr != '\0' || errno == ERANGE) {
+      if ((*endptr != '\0') || (errno == ERANGE)) {
         fprintf(stderr, "error: invalid length: %s\n", argv[i + 1]);
         return false;
       }
       i += 2;
+    } else if (strcmp(argv[i], "-b") == 0) {
+      out->big_endian = true;
+      i++;
     } else if (strcmp(argv[i], "-c") == 0) {
       color_disable();
       i++;
     } else if (strcmp(argv[i], "-r") == 0) {
       out->reverse = true;
       i++;
-    } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+    } else if ((strcmp(argv[i], "--help") == 0) || (strcmp(argv[i], "-h") == 0)) {
       out->help = true;
       return true;
     } else if (strcmp(argv[i], "--version") == 0) {

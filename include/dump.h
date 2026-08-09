@@ -5,6 +5,6 @@
 
 #include "types.h"
 
-bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_length);
+bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_length, bool big_endian);
 
 #endif  // !DUMP_H

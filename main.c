@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
   }
 
   DumpStatistik stats = {0};
-  if (!dump_file(file, &stats, args.offset, args.length)) {
+  if (!dump_file(file, &stats, args.offset, args.length, args.big_endian)) {
     fprintf(stderr, "error: failed to read file %s\n", args.input);
     fclose(file);
     return EXIT_FAILURE;

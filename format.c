@@ -130,6 +130,16 @@ void print_le32(const unsigned char* buf, size_t n) {
   }
 }
 
+void print_be32(const unsigned char* buf, size_t n) {
+  if (n >= 4) {
+    unsigned int val = ((unsigned int)buf[0] << 24) | ((unsigned int)buf[1] << 16) |
+                       ((unsigned int)buf[2] << 8) | (unsigned int)buf[3];
+    printf("%s|%08x|%s ", AC(CLR_LE), val, AC(CLR_RESET));
+  } else {
+    printf(" ");
+  }
+}
+
 void print_hex(const unsigned char* buffer, size_t bytes_read, bool is_elf, size_t offset,
                const bool* highlight) {
   for (size_t i = 0; i < BYTES_PER_LINE; i++) {

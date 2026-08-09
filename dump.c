@@ -17,7 +17,7 @@
 #include "include/pattern.h"
 
 static void print_line(const unsigned char* buf, size_t len, size_t offset, bool is_elf,
-                       const bool* highlight, EntropyStats* estate) {
+                       const bool* highlight, EntropyStats* estate, bool big_endian) {
   print_offset(offset);
 
   double e = calc_entropy(buf, len);
@@ -26,6 +26,12 @@ static void print_line(const unsigned char* buf, size_t len, size_t offset, bool
   const char* anomaly_mark;
   const char* bar_color;
   print_entropy_bar(e, estate, &anomaly_mark, &bar_color);
+
+  if (big_endian) {
+    print_be32(buf, len);
+  } else {
+    print_le32(buf, len);
+  }
 
   print_le32(buf, len);
   print_hex(buf, len, is_elf, offset, highlight);
@@ -42,7 +48,8 @@ static void print_line(const unsigned char* buf, size_t len, size_t offset, bool
   putchar('\n');
 }
 
-bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_length) {
+bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_length,
+               bool big_endian) {
   unsigned char b0[BYTES_PER_LINE];
   unsigned char b1[BYTES_PER_LINE];
   unsigned char b2[BYTES_PER_LINE];
@@ -144,7 +151,7 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
                                  lens[print_idx], bufs[next_idx], lens[next_idx], highlight);
 
       print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, highlight,
-                 &estate);
+                 &estate, big_endian);
 
       if (ferror(stdout)) {
         return false;
@@ -164,7 +171,7 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
                                NULL, 0, highlight);
 
     print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, highlight,
-               &estate);
+               &estate, big_endian);
 
     if (ferror(stdout)) {
       return false;
