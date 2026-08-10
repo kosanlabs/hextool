@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "include/color.h"
 #include "include/config.h"
@@ -14,6 +15,24 @@ static const char* clr_rm(void) {
 
 static const char* clr_add(void) {
   return color_is_enabled() ? CLR_DIFF_ADD : "";
+}
+
+static void print_ctx_line(const unsigned char* buf, size_t len, size_t offset) {
+  printf("  %s%08zx%s  ", AC(CLR_OFFSET), offset, AC(CLR_RESET));
+  for (size_t i = 0; i < BYTES_PER_LINE; i++) {
+    if (i == 8) putchar(' ');
+    if (i < len) {
+      printf("%s%02X%s ", char_color(buf[i], false, false), (unsigned)buf[i], AC(CLR_RESET));
+    } else {
+      printf("   ");
+    }
+  }
+  printf(" |");
+  for (size_t i = 0; i < len; i++) {
+    printf("%s%c%s", char_color(buf[i], false, false), printable_char(buf[i]), AC(CLR_RESET));
+  }
+  for (size_t i = len; i < BYTES_PER_LINE; i++) putchar(' ');
+  printf("|\n");
 }
 
 static void print_rm_line(const unsigned char* buf, size_t len, size_t offset, const bool* diff) {
@@ -56,21 +75,24 @@ static void print_add_line(const unsigned char* buf, size_t len, size_t offset, 
   printf("|\n");
 }
 
-static void print_ctx_line(const unsigned char* buf, size_t len, size_t offset) {
-  printf("  %s%08zx%s  ", AC(CLR_OFFSET), offset, AC(CLR_RESET));
+static void print_marker_line(const bool* diff, size_t len) {
+  printf("            ");
   for (size_t i = 0; i < BYTES_PER_LINE; i++) {
     if (i == 8) putchar(' ');
-    if (i < len) {
-      printf("%s%02X%s ", char_color(buf[i], false, false), (unsigned)buf[i], AC(CLR_RESET));
+    if (i < len && diff[i]) {
+      printf(" %s^%s ", AC(CLR_BOLD), AC(CLR_RESET));
     } else {
       printf("   ");
     }
   }
   printf(" |");
-  for (size_t i = 0; i < len; i++) {
-    printf("%s%c%s", char_color(buf[i], false, false), printable_char(buf[i]), AC(CLR_RESET));
+  for (size_t i = 0; i < BYTES_PER_LINE; i++) {
+    if (i < len && diff[i]) {
+      printf("%s^%s", AC(CLR_BOLD), AC(CLR_RESET));
+    } else {
+      putchar(' ');
+    }
   }
-  for (size_t i = len; i < BYTES_PER_LINE; i++) putchar(' ');
   printf("|\n");
 }
 
@@ -87,14 +109,36 @@ int diff_files(const char* path_a, const char* path_b) {
     return -1;
   }
 
-  printf("--- %s\n", path_a);
-  printf("+++ %s\n", path_b);
+  struct stat st_a, st_b;
+  long long size_a = -1, size_b = -1;
+
+  if (fstat(fileno(fa), &st_a) == 0) {
+    size_a = (long long)st_a.st_size;
+  }
+
+  if (fstat(fileno(fb), &st_b) == 0) {
+    size_b = (long long)st_b.st_size;
+  }
+
+  printf("--- %s", path_a);
+  if (size_a >= 0) {
+    printf(" (%lld bytes)", size_a);
+  }
+
+  printf("\n");
+  printf("+++ %s", path_b);
+
+  if (size_b >= 0) {
+    printf(" (%lld bytes)", size_b);
+  }
+
+  printf("\n");
 
   unsigned char buf_a[BYTES_PER_LINE];
   unsigned char buf_b[BYTES_PER_LINE];
   unsigned char ctx[BYTES_PER_LINE];
   size_t ctx_len = 0, ctx_off = 0;
-  bool have_ctx = false, in_block = false;
+  bool have_ctx = false, pending_trailing = false;
 
   size_t offset = 0;
   size_t total_diffs = 0;
@@ -126,19 +170,26 @@ int diff_files(const char* path_a, const char* path_b) {
     }
 
     if (line_diff) {
-      if (have_ctx && !in_block) {
-        print_ctx_line(ctx, ctx_len, ctx_off);
-      }
+      if (have_ctx && !pending_trailing) print_ctx_line(ctx, ctx_len, ctx_off);
+
       print_rm_line(buf_a, n1, offset, diff);
       print_add_line(buf_b, n2, offset, diff);
+      print_marker_line(diff, max_n);
       putchar('\n');
-      in_block = true;
+      pending_trailing = true;
+      have_ctx = false;
     } else {
-      memcpy(ctx, buf_a, n1);
-      ctx_len = n1;
-      ctx_off = offset;
-      have_ctx = true;
-      in_block = false;
+      if (pending_trailing) {
+        print_ctx_line(buf_a, n1, offset);
+        putchar('\n');
+        pending_trailing = false;
+        have_ctx = false;
+      } else {
+        memcpy(ctx, buf_a, n1);
+        ctx_len = n1;
+        ctx_off = offset;
+        have_ctx = true;
+      }
     }
 
     offset += BYTES_PER_LINE;

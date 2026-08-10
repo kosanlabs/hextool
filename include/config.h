@@ -30,7 +30,7 @@ enum { ELF_MAGIC_SIZE = 4, ELF_MACHINE_OFFSET = 18, ELF_MACHINE_SIZE = 2 };
 #define CLR_COMMENT "\x1b[90m"
 #define CLR_ENTROPY_HIGH "\x1b[38;5;196m"
 #define CLR_ENTROPY_LOW "\x1b[38;5;240m"
-#define CLR_DIFF "\x1b[48;5;196m\x1b[37;1m"
-#define CLR_DIFF_ADD "\x1b[48;5;82m\x1b[30m"
+#define CLR_DIFF "\x1b[38;5;196;1m"
+#define CLR_DIFF_ADD "\x1b[38;5;82;1m"
 
 #endif  // !CONFIG_H
