@@ -6,7 +6,10 @@
 #include <unistd.h>
 
 #include "../include/cli.h"
+#include "../include/color.h"
+#include "../include/config.h"
 #include "../include/diff.h"
+#include "../include/dump.h"
 #include "../include/elf.h"
 #include "../include/format.h"
 #include "../include/pattern.h"
@@ -329,6 +332,116 @@ TEST(diff_missing_file) {
   ASSERT_EQ(diff_files("/nonexistent_a_xyz", "/nonexistent_b_xyz"), -1);
 }
 
+TEST(printable_char_basic) {
+  ASSERT_EQ(printable_char('A'), 'A');
+  ASSERT_EQ(printable_char('\n'), '.');
+  ASSERT_EQ(printable_char(0x80), '.');
+}
+
+TEST(char_color_classes) {
+  ASSERT_STR_EQ(char_color('A', false, false), CLR_PRINT);
+  ASSERT_STR_EQ(char_color(0x00, false, false), CLR_NULL);
+  ASSERT_STR_EQ(char_color(0x80, false, false), CLR_HIGH);
+  ASSERT_STR_EQ(char_color('\x01', false, false), CLR_LOW);
+  ASSERT_STR_EQ(char_color(0x41, true, false), CLR_ELF);
+  ASSERT_STR_EQ(char_color(0x41, false, true), CLR_MATCH);
+}
+
+TEST(dump_file_empty) {
+  FILE* f = tmpfile();
+  ASSERT(f != NULL);
+  DumpStatistik s = {0};
+  ASSERT(dump_file(f, &s, 0, 0, false));
+  ASSERT_EQ(s.total_bytes, 0);
+  ASSERT_EQ(s.total_lines, 0);
+  fclose(f);
+}
+
+TEST(dump_file_counts) {
+  FILE* f = tmpfile();
+  ASSERT(f != NULL);
+  fwrite("A\x00\x80\x01", 1, 4, f);
+  rewind(f);
+  DumpStatistik s = {0};
+  ASSERT(dump_file(f, &s, 0, 0, false));
+  ASSERT_EQ(s.total_bytes, 4);
+  ASSERT_EQ(s.null_count, 1);
+  ASSERT_EQ(s.high_count, 1);
+  ASSERT_EQ(s.print_count, 1);
+  ASSERT_EQ(s.total_lines, 1);
+  ASSERT_EQ(s.entropy.count, 1);
+  fclose(f);
+}
+
+TEST(dump_file_elf_detection) {
+  FILE* f = tmpfile();
+  ASSERT(f != NULL);
+  unsigned char elf[20] = {0};
+  elf[0] = 0x7F;
+  elf[1] = 'E';
+  elf[2] = 'L';
+  elf[3] = 'F';
+  elf[4] = 0x02;
+  elf[18] = 0x3E;
+  fwrite(elf, 1, sizeof(elf), f);
+  rewind(f);
+  DumpStatistik s = {0};
+  ASSERT(dump_file(f, &s, 0, 0, false));
+  ASSERT(s.is_elf);
+  ASSERT_EQ(s.elf_machine, 0x3E);
+  fclose(f);
+}
+
+TEST(dump_file_negative_offset) {
+  FILE* f = tmpfile();
+  ASSERT(f != NULL);
+  DumpStatistik s = {0};
+  ASSERT(!dump_file(f, &s, -1, 0, false));
+  fclose(f);
+}
+
+TEST(dump_file_max_length) {
+  FILE* f = tmpfile();
+  ASSERT(f != NULL);
+  fwrite("0123456789abcdefghij", 1, 20, f);
+  rewind(f);
+  DumpStatistik s = {0};
+  ASSERT(dump_file(f, &s, 0, 4, false));
+  ASSERT_EQ(s.total_bytes, 4);
+  ASSERT_EQ(s.total_lines, 1);
+  fclose(f);
+}
+
+TEST(dump_file_offset) {
+  FILE* f = tmpfile();
+  ASSERT(f != NULL);
+  fwrite("ABCDEFGH", 1, 8, f);
+  rewind(f);
+  DumpStatistik s = {0};
+  ASSERT(dump_file(f, &s, 4, 0, false));
+  ASSERT_EQ(s.total_bytes, 4);
+  ASSERT(!s.is_elf);
+  fclose(f);
+}
+
+TEST(dump_file_big_endian) {
+  FILE* f = tmpfile();
+  ASSERT(f != NULL);
+  fwrite("ABCD", 1, 4, f);
+  rewind(f);
+  DumpStatistik s = {0};
+  ASSERT(dump_file(f, &s, 0, 0, true));
+  ASSERT_EQ(s.total_bytes, 4);
+  fclose(f);
+}
+
+TEST(color_disable_state) {
+  ASSERT(color_is_enabled());
+  color_disable();
+  ASSERT(!color_is_enabled());
+  ASSERT_STR_EQ(char_color('A', false, false), "");
+}
+
 int main() {
   RUN(pattern_hex_valid);
   RUN(pattern_hex_with_spaces);
@@ -365,6 +478,16 @@ int main() {
   RUN(diff_differs);
   RUN(diff_length_mismatch);
   RUN(diff_missing_file);
+  RUN(printable_char_basic);
+  RUN(char_color_classes);
+  RUN(dump_file_empty);
+  RUN(dump_file_counts);
+  RUN(dump_file_elf_detection);
+  RUN(dump_file_negative_offset);
+  RUN(dump_file_max_length);
+  RUN(dump_file_offset);
+  RUN(dump_file_big_endian);
+  RUN(color_disable_state);
 
   printf("  \033[32m%d passed\033[0m  |  \033[31m%d failed\033[0m\n", g_pass, g_fail);
 

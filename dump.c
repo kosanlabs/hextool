@@ -33,7 +33,6 @@ static void print_line(const unsigned char* buf, size_t len, size_t offset, bool
     print_le32(buf, len);
   }
 
-  print_le32(buf, len);
   print_hex(buf, len, is_elf, offset, highlight);
   putchar(' ');
   print_ascii(buf, len, is_elf, offset, highlight);

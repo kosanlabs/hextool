@@ -56,6 +56,7 @@ void print_usage(const char* prog) {
 bool parse_args(int argc, char* argv[], CliArgs* out) {
   out->input = NULL;
   out->output = NULL;
+  out->diff_file = NULL;
   out->reverse = false;
   out->offset = 0;
   out->length = 0;

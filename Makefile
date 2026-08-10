@@ -7,7 +7,7 @@ TEST_TARGET = test_runner
 SRCS = main.c cli.c dump.c format.c color.c pattern.c elf.c stats.c reverse.c diff.c
 OBJS = $(SRCS:.c=.o)
 
-TEST_SRCS = tests/test.c cli.c pattern.c elf.c reverse.c color.c format.c diff.c
+TEST_SRCS = tests/test.c cli.c pattern.c elf.c reverse.c color.c format.c diff.c dump.c
 TEST_OBJS = $(TEST_SRCS:.c=.o)
 
 .PHONY:: all clean test
