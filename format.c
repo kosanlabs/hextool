@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <math.h>
+#include <memory.h>
 #include <stdio.h>
 
 #include "include/color.h"
@@ -34,6 +35,35 @@ double calc_entropy(const unsigned char* buf, size_t n) {
     }
   }
   return entropy;
+}
+
+void entropy_window_init(EntropyWindow* w) {
+  w->len = 0;
+  w->pos = 0;
+}
+
+void entropy_window_push(EntropyWindow* w, const unsigned char* data, size_t n) {
+  for (size_t i = 0; i < n; i++) {
+    w->buf[w->pos] = data[i];
+    w->pos = (w->pos + 1) % ENTROPY_WINDOW_SIZE;
+    if (w->len < ENTROPY_WINDOW_SIZE) {
+      w->len++;
+    }
+  }
+}
+
+double entropy_window_value(const EntropyWindow* w) {
+  unsigned char linear[ENTROPY_WINDOW_SIZE];
+
+  if (w->len < ENTROPY_WINDOW_SIZE) {
+    memcpy(linear, w->buf, w->len);
+  } else {
+    size_t split = w->pos;
+    memcpy(linear, w->buf + split, ENTROPY_WINDOW_SIZE - split);
+    memcpy(linear + ENTROPY_WINDOW_SIZE - split, w->buf, split);
+  }
+
+  return calc_entropy(linear, w->len);
 }
 
 void entropy_update(EntropyStats* s, double e) {

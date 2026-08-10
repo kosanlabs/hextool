@@ -254,6 +254,53 @@ TEST(entropy_stats_stream) {
   ASSERT_EQ(s.max, 3.0);
 }
 
+TEST(entropy_window_init_reset) {
+  EntropyWindow w;
+  entropy_window_init(&w);
+  ASSERT_EQ(w.len, 0);
+  ASSERT_EQ(w.pos, 0);
+  ASSERT_EQ(entropy_window_value(&w), 0.0);
+}
+
+TEST(entropy_window_basic) {
+  EntropyWindow w;
+  entropy_window_init(&w);
+  unsigned char data[] = {0x00, 0x00, 0xFF, 0xFF};
+  entropy_window_push(&w, data, 4);
+  double v = entropy_window_value(&w);
+  ASSERT(fabs(v - calc_entropy(data, 4)) < 1e-9);
+}
+
+TEST(entropy_window_constant) {
+  EntropyWindow w;
+  entropy_window_init(&w);
+  unsigned char data[100];
+  memset(data, 'A', sizeof(data));
+  entropy_window_push(&w, data, sizeof(data));
+  ASSERT_EQ(entropy_window_value(&w), 0.0);
+}
+
+TEST(entropy_window_full_uniform) {
+  EntropyWindow w;
+  entropy_window_init(&w);
+  unsigned char data[256];
+  for (int i = 0; i < 256; i++) data[i] = (unsigned char)i;
+  entropy_window_push(&w, data, sizeof(data));
+  ASSERT(fabs(entropy_window_value(&w) - 8.0) < 1e-9);
+}
+
+TEST(entropy_window_wrap) {
+  EntropyWindow w;
+  entropy_window_init(&w);
+  unsigned char drop[44];
+  memset(drop, 0x00, sizeof(drop));
+  unsigned char keep[256];
+  memset(keep, 0xFF, sizeof(keep));
+  entropy_window_push(&w, drop, sizeof(drop));
+  entropy_window_push(&w, keep, sizeof(keep));
+  ASSERT_EQ(entropy_window_value(&w), 0.0);
+}
+
 TEST(entropy_anomaly_high) {
   EntropyStats s = {0};
   double warm[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0};
@@ -472,6 +519,11 @@ int main() {
   RUN(entropy_four_values);
   RUN(entropy_uniform);
   RUN(entropy_stats_stream);
+  RUN(entropy_window_init_reset);
+  RUN(entropy_window_basic);
+  RUN(entropy_window_constant);
+  RUN(entropy_window_full_uniform);
+  RUN(entropy_window_wrap);
   RUN(entropy_anomaly_high);
   RUN(entropy_anomaly_low);
   RUN(diff_identical);
