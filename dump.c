@@ -16,16 +16,37 @@
 #include "include/format.h"
 #include "include/pattern.h"
 
+typedef struct {
+  double entropy;
+  const char* elf_field;
+} LineAnalysis;
+
+static LineAnalysis analyze_line(const unsigned char* buf, size_t len, size_t offset, bool is_elf,
+                                 EntropyWindow* ewin) {
+  LineAnalysis a;
+
+  entropy_window_push(ewin, buf, len);
+  a.entropy = entropy_window_value(ewin);
+
+  if (is_elf && offset < ELF_HEADER_SIZE) {
+    a.elf_field = elf_field_name(offset);
+  } else {
+    a.elf_field = NULL;
+  }
+
+  return a;
+}
+
 static void print_line(const unsigned char* buf, size_t len, size_t offset, bool is_elf,
                        const bool* highlight, EntropyStats* estate, bool big_endian,
-                       double entropy) {
+                       const LineAnalysis* analysis) {
   print_offset(offset);
 
-  entropy_update(estate, entropy);
+  entropy_update(estate, analysis->entropy);
 
   const char* anomaly_mark;
   const char* bar_color;
-  print_entropy_bar(entropy, estate, &anomaly_mark, &bar_color);
+  print_entropy_bar(analysis->entropy, estate, &anomaly_mark, &bar_color);
 
   if (big_endian) {
     print_be32(buf, len);
@@ -37,6 +58,12 @@ static void print_line(const unsigned char* buf, size_t len, size_t offset, bool
   putchar(' ');
   print_ascii(buf, len, is_elf, offset, highlight);
   print_inline_strings(buf, len);
+
+  if (analysis->elf_field) {
+    printf(" %s; %s%s", AC(CLR_COMMENT), analysis->elf_field, AC(CLR_RESET));
+  }
+
+  putchar('\n');
 
   if (is_elf && offset < ELF_HEADER_SIZE) {
     const char* field = elf_field_name(offset);
@@ -150,11 +177,11 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
                                  prev_idx >= 0 ? lens[prev_idx] : 0, bufs[print_idx],
                                  lens[print_idx], bufs[next_idx], lens[next_idx], highlight);
 
-      entropy_window_push(&ewin, bufs[print_idx], lens[print_idx]);
-      double e = entropy_window_value(&ewin);
+      LineAnalysis analysis =
+          analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, &ewin);
 
       print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, highlight,
-                 &estate, big_endian, e);
+                 &estate, big_endian, &analysis);
 
       if (ferror(stdout)) {
         return false;
@@ -173,11 +200,11 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
                                prev_idx >= 0 ? lens[prev_idx] : 0, bufs[print_idx], lens[print_idx],
                                NULL, 0, highlight);
 
-    entropy_window_push(&ewin, bufs[print_idx], lens[print_idx]);
-    double e = entropy_window_value(&ewin);
+    LineAnalysis analysis =
+        analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, &ewin);
 
     print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, highlight,
-               &estate, big_endian, e);
+               &estate, big_endian, &analysis);
 
     if (ferror(stdout)) {
       return false;
