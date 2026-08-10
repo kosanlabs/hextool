@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c17 -D_POSIX_C_SOURCE=200809L -D_FILE_OFFSET_BITS=64 -Iinclude
+CFLAGS = -Wall -Wextra -O2 -std=c17 -fsanitize=address -D_POSIX_C_SOURCE=200809L -D_FILE_OFFSET_BITS=64 -Iinclude
 LDFLAGS = -lm
 TARGET = hextool
 TEST_TARGET = test_runner
