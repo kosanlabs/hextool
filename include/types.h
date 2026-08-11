@@ -23,6 +23,7 @@ typedef struct {
   bool is_elf;
   unsigned short elf_machine;
   EntropyStats entropy;
+  size_t freq[256];
 } DumpStatistik;
 
 #endif  // !TYPES_H

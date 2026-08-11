@@ -154,6 +154,7 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
 
     for (size_t i = 0; i < lens[idx]; i++) {
       unsigned char c = bufs[idx][i];
+      stats->freq[c]++;
       if (c == 0x00) {
         stats->null_count++;
       } else if (c >= 0x80) {

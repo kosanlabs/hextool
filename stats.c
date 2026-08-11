@@ -8,6 +8,8 @@
 #include "include/elf.h"
 #include "include/pattern.h"
 
+static void print_frequency_summary(const DumpStatistik* stats);
+
 static double safe_pct(size_t part, size_t total) {
   return total ? (part * 100.0 / total) : 0.0;
 }
@@ -90,4 +92,70 @@ void print_hasil(const char* filename, const DumpStatistik* stats) {
          AC(CLR_DIM), ENTROPY_WARMUP, AC(CLR_RESET));
 
   print_entropy_summary(&stats->entropy);
+
+  print_frequency_summary(stats);
+  printf("\n");
+}
+
+static void print_frequency_summary(const DumpStatistik* stats) {
+  if (stats->total_bytes == 0) {
+    return;
+  }
+
+  typedef struct {
+    unsigned char byte;
+    size_t count;
+  } FreqEntry;
+
+  FreqEntry entries[256];
+  int n = 0;
+
+  for (int i = 0; i < 256; i++) {
+    if (stats->freq[i] > 0) {
+      entries[n].byte = (unsigned char)i;
+      entries[n].count = stats->freq[i];
+      n++;
+    }
+  }
+
+  if (n == 0) {
+    return;
+  }
+
+  for (int i = 1; i < n; i++) {
+    FreqEntry key = entries[i];
+    int j = i - 1;
+
+    while (j >= 0 && entries[j].count < key.count) {
+      entries[j + 1] = entries[j];
+      j--;
+    }
+    entries[j + 1] = key;
+  }
+
+  int top = n < 10 ? n : 10;
+
+  printf("\n%sFrequency analysis (top %d):%s\n", AC(CLR_BOLD), top, AC(CLR_RESET));
+
+  for (int i = 0; i < top; i++) {
+    double pct = safe_pct(entries[i].count, stats->total_bytes);
+    int bar_len = (int)(pct / 100.0 * 20.0 + 0.5);
+
+    if (bar_len < 1 && entries[i].count > 0) {
+      bar_len = 1;
+    }
+
+    if (bar_len > 20) {
+      bar_len = 20;
+    }
+
+    printf("  %s0x%02x%s : %6zu  (%5.1f%%)  ", AC(CLR_OFFSET), entries[i].byte, AC(CLR_RESET),
+           entries[i].count, pct);
+
+    for (int j = 0; j < bar_len; j++) {
+      putchar('#');
+    }
+
+    putchar('\n');
+  }
 }
