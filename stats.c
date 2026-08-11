@@ -49,6 +49,32 @@ static void print_entropy_summary(const EntropyStats* s) {
   }
 }
 
+static void print_segment_summary(const DumpStatistik* stats) {
+  if (!stats->is_elf || stats->segment_count == 0) return;
+
+  printf("\n%sSegment map:%s\n", AC(CLR_BOLD), AC(CLR_RESET));
+  for (int i = 0; i < stats->segment_count; i++) {
+    const ElfSegment* s = &stats->segments[i];
+    const char* type_name = elf_segment_type_name(s->type);
+
+    char flags[4] = {0};
+    int f = 0;
+    if (s->flags & 4) {
+      flags[f++] = 'R';
+    }
+    if (s->flags & 2) {
+      flags[f++] = 'W';
+    }
+    if (s->flags & 1) {
+      flags[f++] = 'X';
+    }
+
+    printf("  %-14s 0x%08llx - 0x%08llx  (%8llu bytes)  %s\n", type_name,
+           (unsigned long long)s->offset, (unsigned long long)(s->offset + s->filesz),
+           (unsigned long long)s->filesz, flags);
+  }
+}
+
 void print_hasil(const char* filename, const DumpStatistik* stats) {
   printf("\n\n");
   printf("File           : %s%s%s\n", AC(CLR_BOLD), filename, AC(CLR_RESET));
@@ -94,7 +120,8 @@ void print_hasil(const char* filename, const DumpStatistik* stats) {
   print_entropy_summary(&stats->entropy);
 
   print_frequency_summary(stats);
-  printf("\n");
+
+  print_segment_summary(stats);
 }
 
 static void print_frequency_summary(const DumpStatistik* stats) {

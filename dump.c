@@ -19,11 +19,13 @@
 typedef struct {
   double entropy;
   const char* elf_field;
+  const char* segment;
 } LineAnalysis;
 
 static LineAnalysis analyze_line(const unsigned char* buf, size_t len, size_t offset, bool is_elf,
-                                 EntropyWindow* ewin) {
+                                 const ElfSegment* segs, int seg_count, EntropyWindow* ewin) {
   LineAnalysis a;
+  a.segment = NULL;
 
   entropy_window_push(ewin, buf, len);
   a.entropy = entropy_window_value(ewin);
@@ -32,6 +34,15 @@ static LineAnalysis analyze_line(const unsigned char* buf, size_t len, size_t of
     a.elf_field = elf_field_name(offset);
   } else {
     a.elf_field = NULL;
+  }
+
+  if (is_elf && seg_count > 0) {
+    for (int i = 0; i < seg_count; i++) {
+      if (offset == segs[i].offset) {
+        a.segment = elf_segment_type_name(segs[i].type);
+        break;
+      }
+    }
   }
 
   return a;
@@ -63,14 +74,10 @@ static void print_line(const unsigned char* buf, size_t len, size_t offset, bool
     printf(" %s; %s%s", AC(CLR_COMMENT), analysis->elf_field, AC(CLR_RESET));
   }
 
-  putchar('\n');
-
-  if (is_elf && offset < ELF_HEADER_SIZE) {
-    const char* field = elf_field_name(offset);
-    if (field) {
-      printf(" %s; %s%s", AC(CLR_COMMENT), field, AC(CLR_RESET));
-    }
+  if (analysis->segment) {
+    printf("\t%s; SEGMENT: %s%s", AC(CLR_COMMENT), analysis->segment, AC(CLR_RESET));
   }
+
   putchar('\n');
 }
 
@@ -111,6 +118,8 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
         perror("fread");
         return false;
       }
+
+      stats->segment_count = elf_read_segments(file, stats->segments, MAX_SEGMENTS);
       rewind(file);
     }
   } else {
@@ -179,7 +188,8 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
                                  lens[print_idx], bufs[next_idx], lens[next_idx], highlight);
 
       LineAnalysis analysis =
-          analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, &ewin);
+          analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf,
+                       stats->segments, stats->segment_count, &ewin);
 
       print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, highlight,
                  &estate, big_endian, &analysis);
@@ -202,7 +212,8 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
                                NULL, 0, highlight);
 
     LineAnalysis analysis =
-        analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, &ewin);
+        analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf,
+                     stats->segments, stats->segment_count, &ewin);
 
     print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, highlight,
                &estate, big_endian, &analysis);

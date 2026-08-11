@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "elf.h"
+
 typedef struct {
   double mean;
   double m2;
@@ -24,6 +26,8 @@ typedef struct {
   unsigned short elf_machine;
   EntropyStats entropy;
   size_t freq[256];
+  ElfSegment segments[MAX_SEGMENTS];
+  int segment_count;
 } DumpStatistik;
 
 #endif  // !TYPES_H

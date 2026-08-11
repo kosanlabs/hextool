@@ -36,7 +36,13 @@
 *.x86_64
 *.hex
 hextool
-test_runner
+tests/test_cli
+tests/test_pattern
+tests/test_elf
+tests/test_reverse
+tests/test_format
+tests/test_diff
+tests/test_dump
 
 # Debug files
 *.dSYM/
