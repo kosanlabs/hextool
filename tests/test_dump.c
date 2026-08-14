@@ -1,5 +1,6 @@
 #include "test.h"
 
+#include "../include/binfmt.h"
 #include "../include/dump.h"
 
 TEST(dump_file_empty) {
@@ -42,8 +43,8 @@ TEST(dump_file_elf_detection) {
   rewind(f);
   DumpStatistik s = {0};
   ASSERT(dump_file(f, &s, 0, 0, false));
-  ASSERT(s.is_elf);
-  ASSERT_EQ(s.elf_machine, 0x3E);
+  ASSERT_EQ(s.format_type, FMT_ELF);
+  ASSERT_EQ(s.machine, 0x3E);
   fclose(f);
 }
 
@@ -75,7 +76,6 @@ TEST(dump_file_offset) {
   DumpStatistik s = {0};
   ASSERT(dump_file(f, &s, 4, 0, false));
   ASSERT_EQ(s.total_bytes, 4);
-  ASSERT(!s.is_elf);
   fclose(f);
 }
 

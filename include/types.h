@@ -22,8 +22,8 @@ typedef struct {
   size_t null_count;
   size_t print_count;
   size_t high_count;
-  bool is_elf;
-  unsigned short elf_machine;
+  int format_type;
+  unsigned short machine;
   EntropyStats entropy;
   size_t freq[256];
   ElfSegment segments[MAX_SEGMENTS];

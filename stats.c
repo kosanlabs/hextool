@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "include/binfmt.h"
 #include "include/color.h"
 #include "include/config.h"
 #include "include/elf.h"
@@ -50,7 +51,9 @@ static void print_entropy_summary(const EntropyStats* s) {
 }
 
 static void print_segment_summary(const DumpStatistik* stats) {
-  if (!stats->is_elf || stats->segment_count == 0) return;
+  if (stats->format_type != FMT_ELF || stats->segment_count == 0) {
+    return;
+  }
 
   printf("\n%sSegment map:%s\n", AC(CLR_BOLD), AC(CLR_RESET));
   for (int i = 0; i < stats->segment_count; i++) {
@@ -81,9 +84,9 @@ void print_hasil(const char* filename, const DumpStatistik* stats) {
   printf("Total bytes    : %zu\n", stats->total_bytes);
   printf("Total lines    : %zu\n", stats->total_lines);
 
-  if (stats->is_elf) {
+  if (stats->format_type != FMT_UNKNOWN) {
     printf("Format         : %sELF Executable%s\n", AC(CLR_ELF), AC(CLR_RESET));
-    printf("Architecture   : %s%s%s\n", AC(CLR_ARCH), machine_to_arch(stats->elf_machine),
+    printf("Architecture   : %s%s%s\n", AC(CLR_ARCH), machine_to_arch(stats->machine),
            AC(CLR_RESET));
   }
   if (pattern_is_active()) {

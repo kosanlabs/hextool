@@ -1,15 +1,17 @@
+#include <ctype.h>
 #define _POSIX_C_SOURCE 200809L
 
-#include "include/dump.h"
-
-#include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "include/dump.h"
 
 #ifdef __linux__
 #include <fcntl.h>
 #endif /* ifdef __linux__ */
 
+#include "include/binfmt.h" 
 #include "include/color.h"
 #include "include/config.h"
 #include "include/elf.h"
@@ -18,25 +20,23 @@
 
 typedef struct {
   double entropy;
-  const char* elf_field;
+  const char* field_name;
   const char* segment;
 } LineAnalysis;
 
-static LineAnalysis analyze_line(const unsigned char* buf, size_t len, size_t offset, bool is_elf,
-                                 const ElfSegment* segs, int seg_count, EntropyWindow* ewin) {
+static LineAnalysis analyze_line(const unsigned char* buf, size_t len, size_t offset,
+                                 const BinFmtInfo* fmt, const ElfSegment* segs, int seg_count,
+                                 EntropyWindow* ewin) {
   LineAnalysis a;
   a.segment = NULL;
+  a.field_name = NULL;
 
   entropy_window_push(ewin, buf, len);
   a.entropy = entropy_window_value(ewin);
 
-  if (is_elf && offset < ELF_HEADER_SIZE) {
-    a.elf_field = elf_field_name(offset);
-  } else {
-    a.elf_field = NULL;
-  }
+  a.field_name = binfmt_field_name(fmt->type, offset, fmt);
 
-  if (is_elf && seg_count > 0) {
+  if (fmt->type == FMT_ELF && seg_count > 0) {
     for (int i = 0; i < seg_count; i++) {
       if (offset == segs[i].offset) {
         a.segment = elf_segment_type_name(segs[i].type);
@@ -51,6 +51,8 @@ static LineAnalysis analyze_line(const unsigned char* buf, size_t len, size_t of
 static void print_line(const unsigned char* buf, size_t len, size_t offset, bool is_elf,
                        const bool* highlight, EntropyStats* estate, bool big_endian,
                        const LineAnalysis* analysis) {
+  (void)is_elf;
+
   print_offset(offset);
 
   entropy_update(estate, analysis->entropy);
@@ -65,17 +67,17 @@ static void print_line(const unsigned char* buf, size_t len, size_t offset, bool
     print_le32(buf, len);
   }
 
-  print_hex(buf, len, is_elf, offset, highlight);
+  print_hex(buf, len, analysis->field_name != NULL, offset, highlight);
   putchar(' ');
-  print_ascii(buf, len, is_elf, offset, highlight);
+  print_ascii(buf, len, analysis->field_name != NULL, offset, highlight);
   print_inline_strings(buf, len);
 
-  if (analysis->elf_field) {
-    printf(" %s; %s%s", AC(CLR_COMMENT), analysis->elf_field, AC(CLR_RESET));
+  if (analysis->field_name) {
+    printf(" %s; %s%s", AC(CLR_COMMENT), analysis->field_name, AC(CLR_RESET));
   }
 
   if (analysis->segment) {
-    printf("\t%s; SEGMENT: %s%s", AC(CLR_COMMENT), analysis->segment, AC(CLR_RESET));
+    printf(" %s; SEGMENT: %s%s", AC(CLR_COMMENT), analysis->segment, AC(CLR_RESET));
   }
 
   putchar('\n');
@@ -103,27 +105,18 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
     return false;
   }
 
+  BinFmtInfo fmt = {0};
   if (start_offset == 0) {
-    stats->is_elf = detect_elf(file);
+    binfmt_detect(file, &fmt);
+    stats->format_type = fmt.type;
+    stats->machine = fmt.machine;
 
-    if (ferror(file)) {
-      perror("fread");
-      return false;
-    }
-
-    if (stats->is_elf) {
-      stats->elf_machine = read_elf_machine(file);
-
-      if (ferror(file)) {
-        perror("fread");
-        return false;
-      }
-
+    if (fmt.type == FMT_ELF) {
       stats->segment_count = elf_read_segments(file, stats->segments, MAX_SEGMENTS);
       rewind(file);
     }
   } else {
-    stats->is_elf = false;
+    stats->format_type = FMT_UNKNOWN;
   }
 
 #ifdef __linux__
@@ -187,12 +180,11 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
                                  prev_idx >= 0 ? lens[prev_idx] : 0, bufs[print_idx],
                                  lens[print_idx], bufs[next_idx], lens[next_idx], highlight);
 
-      LineAnalysis analysis =
-          analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf,
-                       stats->segments, stats->segment_count, &ewin);
+      LineAnalysis analysis = analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx],
+                                           &fmt, stats->segments, stats->segment_count, &ewin);
 
-      print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, highlight,
-                 &estate, big_endian, &analysis);
+      print_line(bufs[print_idx], lens[print_idx], offsets[print_idx],
+                 stats->format_type == FMT_ELF, highlight, &estate, big_endian, &analysis);
 
       if (ferror(stdout)) {
         return false;
@@ -211,12 +203,11 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
                                prev_idx >= 0 ? lens[prev_idx] : 0, bufs[print_idx], lens[print_idx],
                                NULL, 0, highlight);
 
-    LineAnalysis analysis =
-        analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf,
-                     stats->segments, stats->segment_count, &ewin);
+    LineAnalysis analysis = analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], &fmt,
+                                         stats->segments, stats->segment_count, &ewin);
 
-    print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->is_elf, highlight,
-               &estate, big_endian, &analysis);
+    print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->format_type == FMT_ELF,
+               highlight, &estate, big_endian, &analysis);
 
     if (ferror(stdout)) {
       return false;
