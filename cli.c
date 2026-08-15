@@ -42,6 +42,7 @@ void print_usage(const char* prog) {
           "  -c                  Disable colors\n"
           "  -r                  Reverse hexdump to binary\n"
           "  -d <file>           Diff mode: compare input against <file>\n"
+          "  -D                  Disassembly mode (x86-64 only)\n"
           "\n"
           "Examples:\n"
           "  %s /bin/ls\n"
@@ -49,8 +50,9 @@ void print_usage(const char* prog) {
           "  %s -r dump.txt output.bin\n"
           "  %s -o 0x1000 -n 256 /bin/ls\n"
           "  %s -b /bin/ls\n"
-          "  %s -d /bin/ls.other /bin/ls\n",
-           name, name, name, name, name, name, name, name, name, name);
+          "  %s -d /bin/ls.other /bin/ls\n"
+          "  %s -D /bin/ls\n",
+          name, name, name, name, name, name, name, name, name, name, name);
 }
 
 bool parse_args(int argc, char* argv[], CliArgs* out) {
@@ -99,6 +101,9 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
     } else if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
       out->diff_file = argv[i + 1];
       i += 2;
+    } else if (strcmp(argv[i], "-D") == 0) {
+      out->disasm = true;
+      i++;
     } else if (strcmp(argv[i], "-b") == 0) {
       out->big_endian = true;
       i++;
@@ -153,6 +158,11 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
 
   if (out->diff_file && pattern_is_active()) {
     fprintf(stderr, "error: pattern search is not compatible with diff mode\n");
+    return false;
+  }
+
+  if (out->disasm && (out->reverse || out->diff_file)) {
+    fprintf(stderr, "error: disassmbly mode is incompatible with -r and -d\n");
     return false;
   }
 

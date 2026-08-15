@@ -14,6 +14,7 @@ typedef struct {
   bool help;
   bool version;
   bool big_endian;
+  bool disasm;
 } CliArgs;
 
 bool parse_args(int argc, char* argv[], CliArgs* out);
