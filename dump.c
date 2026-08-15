@@ -1,20 +1,21 @@
-#define _POSIX_C_SOURCE 200809L
-#include "include/dump.h"
-
 #include <ctype.h>
+#define _POSIX_C_SOURCE 200809L
+
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "include/disasm.h"
+#include "include/dump.h"
 
 #ifdef __linux__
 #include <fcntl.h>
-#endif /* ifdef __linux__ */
+#endif
 
 #include "include/binfmt.h"
 #include "include/color.h"
 #include "include/config.h"
+#include "include/disasm.h"
 #include "include/elf.h"
 #include "include/format.h"
 #include "include/pattern.h"
@@ -28,9 +29,7 @@ typedef struct {
 static LineAnalysis analyze_line(const unsigned char* buf, size_t len, size_t offset,
                                  const BinFmtInfo* fmt, const ElfSegment* segs, int seg_count,
                                  EntropyWindow* ewin) {
-  LineAnalysis a;
-  a.segment = NULL;
-  a.field_name = NULL;
+  LineAnalysis a = {0};
 
   entropy_window_push(ewin, buf, len);
   a.entropy = entropy_window_value(ewin);
@@ -76,26 +75,33 @@ static void print_line(const unsigned char* buf, size_t len, size_t offset, bool
   if (analysis->field_name) {
     printf(" %s; %s%s", AC(CLR_COMMENT), analysis->field_name, AC(CLR_RESET));
   }
-
   if (analysis->segment) {
     printf(" %s; SEGMENT: %s%s", AC(CLR_COMMENT), analysis->segment, AC(CLR_RESET));
   }
-
   putchar('\n');
 }
 
 static void print_disasm_line(const unsigned char* buf, size_t len, size_t offset,
-                              const LineAnalysis* analysis) {
-  (void)analysis;
-
+                              EntropyStats* estate, const LineAnalysis* analysis) {
   char mnemonic[64];
   size_t consumed = disasm_x86_64(buf, len, offset, mnemonic, sizeof(mnemonic));
 
-  printf("%s%08zx%s  ", AC(CLR_OFFSET), offset, AC(CLR_RESET));
+  print_offset(offset);
+
+  if (estate) {
+    entropy_update(estate, analysis->entropy);
+    const char* anomaly_mark;
+    const char* bar_color;
+    print_entropy_bar(analysis->entropy, estate, &anomaly_mark, &bar_color);
+  } else {
+    printf("         ");
+  }
 
   size_t print_len = consumed > 0 ? consumed : 1;
-  if (print_len > len) print_len = len;
-  for (size_t i = 0; i < 8; i++) {
+  if (print_len > len) {
+    print_len = len;
+  }
+  for (size_t i = 0; i < 7; i++) {
     if (i < print_len) {
       printf("%02x ", (unsigned)buf[i]);
     } else {
@@ -103,7 +109,15 @@ static void print_disasm_line(const unsigned char* buf, size_t len, size_t offse
     }
   }
 
-  printf(" %s%s%s\n", AC(CLR_DISASM), mnemonic, AC(CLR_RESET));
+  printf(" %s%s%s", AC(CLR_DISASM), mnemonic, AC(CLR_RESET));
+
+  if (analysis->field_name) {
+    printf(" %s; %s%s", AC(CLR_COMMENT), analysis->field_name, AC(CLR_RESET));
+  }
+  if (analysis->segment) {
+    printf(" %s; SEGMENT: %s%s", AC(CLR_COMMENT), analysis->segment, AC(CLR_RESET));
+  }
+  putchar('\n');
 }
 
 bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_length,
@@ -151,7 +165,7 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
 #ifdef __linux__
   posix_fadvise(fileno(file), start_offset, max_length ? (off_t)max_length : 0,
                 POSIX_FADV_SEQUENTIAL);
-#endif /* ifdef __linux__ */
+#endif  // __linux__
 
   if (offset > 0) {
     if (fseek(file, offset, SEEK_SET) != 0) {
@@ -161,32 +175,39 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
   }
 
   if (disasm) {
-    unsigned char inbuf[15];
+    unsigned char inbuf[30];
     size_t fill = 0;
 
     while (1) {
-      size_t want = sizeof(inbuf) - fill;
+      size_t want = 15 - fill;
       if (max_length > 0 && max_length - dumped < want) {
         want = max_length - dumped;
       }
+      if (want == 0) break;
+
       size_t got = fread(inbuf + fill, 1, want, file);
-      fill += got;
       if (ferror(file)) {
         perror("fread");
         return false;
       }
-      if (got == 0 || (max_length > 0 && dumped + fill >= max_length)) {
+      fill += got;
+      if (got == 0) {
         break;
       }
 
       size_t pos = 0;
       while (pos + 15 <= fill) {
-        print_disasm_line(inbuf + pos, 15, offset + pos, NULL);
-        char m[64];
-        size_t step = disasm_x86_64(inbuf + pos, 15, offset + pos, m, sizeof(m));
+        LineAnalysis analysis = analyze_line(inbuf + pos, 15, offset + pos, &fmt, stats->segments,
+                                             stats->segment_count, &ewin);
+
+        print_disasm_line(inbuf + pos, 15, offset + pos, &estate, &analysis);
+
+        char dummy[64];
+        size_t step = disasm_x86_64(inbuf + pos, 15, offset + pos, dummy, sizeof(dummy));
         if (step == 0 || step > 15) {
           step = 1;
         }
+
         for (size_t i = 0; i < step; i++) {
           unsigned char c = inbuf[pos + i];
           stats->freq[c]++;
@@ -198,25 +219,28 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
             stats->print_count++;
           }
         }
+
         pos += step;
         stats->total_bytes += step;
         stats->total_lines++;
       }
 
       offset += pos;
+      dumped += pos;
       memmove(inbuf, inbuf + pos, fill - pos);
       fill -= pos;
-      dumped += pos;
     }
 
     size_t pos = 0;
     while (pos < fill) {
-      print_disasm_line(inbuf + pos, fill - pos, offset + pos, NULL);
-      char m[64];
-      size_t step = disasm_x86_64(inbuf + pos, fill - pos, offset + pos, m, sizeof(m));
-      if (step == 0 || step > fill - pos) {
-        step = fill - pos;
-      }
+      LineAnalysis analysis = analyze_line(inbuf + pos, fill - pos, offset + pos, &fmt,
+                                           stats->segments, stats->segment_count, &ewin);
+      print_disasm_line(inbuf + pos, fill - pos, offset + pos, &estate, &analysis);
+
+      char dummy[64];
+      size_t step = disasm_x86_64(inbuf + pos, fill - pos, offset + pos, dummy, sizeof(dummy));
+      if (step == 0 || step > fill - pos) step = fill - pos;
+
       for (size_t i = 0; i < step; i++) {
         unsigned char c = inbuf[pos + i];
         stats->freq[c]++;
@@ -228,21 +252,19 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
           stats->print_count++;
         }
       }
+
       pos += step;
       stats->total_bytes += step;
       stats->total_lines++;
     }
 
-    if (ferror(file)) {
-      perror("fread");
-      return false;
-    }
-    return true;
+    stats->entropy = estate;
+    return !ferror(file);
   }
 
   while (1) {
     int idx = count % 3;
-    size_t to_read = disasm ? 15 : BYTES_PER_LINE;
+    size_t to_read = BYTES_PER_LINE;
     if (max_length > 0) {
       size_t remain = max_length - dumped;
       if (remain == 0) {
@@ -292,27 +314,10 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
       LineAnalysis analysis = analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx],
                                            &fmt, stats->segments, stats->segment_count, &ewin);
 
-      if (disasm) {
-        size_t pos = 0;
-        while (pos < lens[print_idx]) {
-          print_disasm_line(bufs[print_idx] + pos, lens[print_idx] - pos, offsets[print_idx] + pos,
-                            &analysis);
-          char dummy[64];
-          size_t step = disasm_x86_64(bufs[print_idx] + pos, lens[print_idx] - pos,
-                                      offsets[print_idx] + pos, dummy, sizeof(dummy));
-          if (step == 0) {
-            step = 1;
-          }
-          pos += step;
-        }
-      } else {
-        print_line(bufs[print_idx], lens[print_idx], offsets[print_idx],
-                   stats->format_type == FMT_ELF, highlight, &estate, big_endian, &analysis);
-      }
+      print_line(bufs[print_idx], lens[print_idx], offsets[print_idx],
+                 stats->format_type == FMT_ELF, highlight, &estate, big_endian, &analysis);
 
-      if (ferror(stdout)) {
-        return false;
-      }
+      if (ferror(stdout)) return false;
     }
 
     count++;
@@ -330,23 +335,8 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
     LineAnalysis analysis = analyze_line(bufs[print_idx], lens[print_idx], offsets[print_idx], &fmt,
                                          stats->segments, stats->segment_count, &ewin);
 
-    if (disasm) {
-      size_t pos = 0;
-      while (pos < lens[print_idx]) {
-        print_disasm_line(bufs[print_idx] + pos, lens[print_idx] - pos, offsets[print_idx] + pos,
-                          &analysis);
-        char dummy[64];
-        size_t step = disasm_x86_64(bufs[print_idx] + pos, lens[print_idx] - pos,
-                                    offsets[print_idx] + pos, dummy, sizeof(dummy));
-        if (step == 0) {
-          step = 1;
-        }
-        pos += step;
-      }
-    } else {
-      print_line(bufs[print_idx], lens[print_idx], offsets[print_idx],
-                 stats->format_type == FMT_ELF, highlight, &estate, big_endian, &analysis);
-    }
+    print_line(bufs[print_idx], lens[print_idx], offsets[print_idx], stats->format_type == FMT_ELF,
+               highlight, &estate, big_endian, &analysis);
 
     if (ferror(stdout)) {
       return false;
@@ -358,6 +348,5 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
     perror("fread");
     return false;
   }
-
   return !ferror(file);
 }
