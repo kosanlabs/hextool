@@ -17,6 +17,13 @@ void print_offset(size_t offset) {
   printf("%s%08zx %s", AC(CLR_OFFSET), offset, AC(CLR_RESET));
 }
 
+void print_dump_header(void) {
+  printf("%s         %s            %s           %s  ", AC(CLR_DIM), AC(CLR_RESET), AC(CLR_DIM),
+         AC(CLR_RESET));
+  printf("  00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F  ");
+  printf("%s|0123456789ABCDEF|%s\n", AC(CLR_DIM), AC(CLR_RESET));
+}
+
 double calc_entropy(const unsigned char* buf, size_t n) {
   if (n == 0) {
     return 0.0;

@@ -9,6 +9,8 @@
 
 void print_offset(size_t offset);
 
+void print_dump_header(void);
+
 double calc_entropy(const unsigned char* buf, size_t n);
 void entropy_update(EntropyStats* s, double e);
 void print_entropy_bar(double entropy, EntropyStats* stats, const char** out_anomaly_mark,

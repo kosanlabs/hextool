@@ -1,7 +1,6 @@
 #include <ctype.h>
 #define _POSIX_C_SOURCE 200809L
 
-#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -61,6 +60,8 @@ static void print_line(const unsigned char* buf, size_t len, size_t offset, bool
   const char* bar_color;
   print_entropy_bar(analysis->entropy, estate, &anomaly_mark, &bar_color);
 
+  printf("%.2f", analysis->entropy);
+
   if (big_endian) {
     print_be32(buf, len);
   } else {
@@ -93,8 +94,9 @@ static void print_disasm_line(const unsigned char* buf, size_t len, size_t offse
     const char* anomaly_mark;
     const char* bar_color;
     print_entropy_bar(analysis->entropy, estate, &anomaly_mark, &bar_color);
+    printf("%.2f", analysis->entropy);
   } else {
-    printf("         ");
+    printf("                ");
   }
 
   size_t print_len = consumed > 0 ? consumed : 1;
@@ -172,6 +174,10 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
       perror("fseek");
       return false;
     }
+  }
+
+  if (!disasm) {
+    print_dump_header();
   }
 
   if (disasm) {
