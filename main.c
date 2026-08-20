@@ -14,7 +14,7 @@
 #include "include/types.h"
 
 int main(int argc, char* argv[]) {
-  CliArgs args;
+  CliArgs args = {0};
   if (!parse_args(argc, argv, &args)) {
     return EXIT_FAILURE;
   }

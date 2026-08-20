@@ -161,7 +161,8 @@ bool dump_file(FILE* file, DumpStatistik* stats, long start_offset, size_t max_l
   if (disasm && !(fmt.type == FMT_ELF && (fmt.machine == 0x03 || fmt.machine == 0x3E)) &&
       !(fmt.type == FMT_PE && (fmt.machine == 0x014c || fmt.machine == 0x8664)) &&
       !(fmt.type == FMT_MACHO && (fmt.machine == 0x03 || fmt.machine == 0x3E))) {
-    fprintf(stderr, "warning: disassembly mode works best with x86/x86-64 binaries\n");
+    fprintf(stderr, "note: binary is not x86/x86-64, falling back to hex dump\n");
+    disasm = false;
   }
 
 #ifdef __linux__

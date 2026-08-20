@@ -65,6 +65,7 @@ bool parse_args(int argc, char* argv[], CliArgs* out) {
   out->help = false;
   out->version = false;
   out->big_endian = false;
+  out->disasm = false;
 
   int i = 1;
   while (i < argc) {
